@@ -8,6 +8,25 @@ This code will slowly replace our old code and make it publicly available under 
 
 ## Functionality
 
+### Soon to be added 
+
+For users;
+ 
+* [X] Cpts
+* [ ] Boreholes
+* [ ] DStability interaction / serialization / parsing / editing
+* [ ] Crosssections
+* [ ] Geotechnical profiles
+
+For developers;
+
+* [ ] Automated packaging for pip install
+* [ ] Automated testing CI/CD
+
+and more... 
+
+**NOTE** This code will be written in my sparetime so don't go pushing me unless you are willing to pay. I am making an effort to create something that is easy to use and has decent documentation and this takes time.
+
 ### CPT
 
 #### Reading
@@ -131,3 +150,10 @@ cpt.plot_Ic("cpt_Ic_plot.png")
 
 **DISCLAIMER**
 The interpretation options of CPTs are endless and can be very specific for the region you are working in. For me these interpretation methods have proven their value but always check if they work for you!
+
+## Credits
+
+Credits go to;
+
+* Deltares for the d-geolib package
+* Thomas van der Linden for the gefxmlreader (I hate xml parsing ;-)
