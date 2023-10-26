@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from leveelogic.models.datamodel import DataModel
+from ..models.datamodel import DataModel
 
 
 class SoilLayer(DataModel):

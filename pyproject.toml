@@ -13,6 +13,7 @@ matplotlib = "^3.8.0"
 numpy = "^1.26.1"
 pyproj = "^3.6.1"
 simplejson = "^3.19.2"
+pytest = "^7.4.3"
 
 
 [build-system]

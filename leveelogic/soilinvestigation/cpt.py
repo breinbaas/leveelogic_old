@@ -467,9 +467,13 @@ class Cpt(BaseModel):
         Returns:
             np.array: the CPT data as a numpy array"""
         if self.has_u:
-            return np.transpose(np.array([self.z, self.qc, self.fs, self.fr, self.u]))
+            return np.transpose(
+                np.array([self.z, self.qc, self.fs, self.fr, self.u], dtype=float)
+            )
         else:
-            return np.transpose(np.array([self.z, self.qc, self.fs, self.fr]))
+            return np.transpose(
+                np.array([self.z, self.qc, self.fs, self.fr], dtype=float)
+            )
 
     def as_dataframe(self) -> pd.DataFrame:
         """
@@ -489,22 +493,23 @@ class Cpt(BaseModel):
 
     def plot(
         self,
+        filename: str = "",
         size_x: float = 10,
         size_y: float = 12,
         cptconversionmethod: CptConversionMethod = None,
         minimum_layerheight: float = DEFAULT_CPT_INTERPRETATION_MIN_LAYERHEIGHT,
         peat_friction_ratio: float = DEFAULT_CPT_INTERPRETATION_PEAT_FRICTION_RATIO,
         add_preexcavated_layer: bool = True,
-    ) -> Figure:
+    ) -> Optional[Figure]:
         """Plot the CPT
 
         Args:
+            filename (str): the name of the file to save to, if not set the function will return a Figure object
             size_x (float): figure width in inches, default 8
             size_y (float): figure height in inches, default 12
-            filepath (str): the path to save the file to (filename will be automatic), default "" (no save)
 
         Returns:
-            Figure
+            Figure if filename is not set
         """
         data = self.as_dataframe()
         fig = Figure(figsize=(size_x, size_y))
@@ -519,6 +524,7 @@ class Cpt(BaseModel):
         data.plot(x="qc", y="z", ax=ax_qc, sharey="col", label="qc [MPa]")
         ax_qc.grid(which="both")
         ax_qc.set_xlim(0, CPT_QC_MAX)
+        ax_qc.set_ylim(z1, z2)
         plt.title(self.name)
 
         suffix = ""
@@ -561,6 +567,18 @@ class Cpt(BaseModel):
                 raise ValueError(
                     f"Unknown interpretation method '{cptconversionmethod}'"
                 )
+        else:  # if applicable plot the preexcavated layer
+            if self.pre_excavated_depth > 0.0:
+                ax_qc.add_patch(
+                    patches.Rectangle(
+                        (0, self.top - self.pre_excavated_depth),
+                        CPT_QC_MAX,
+                        self.pre_excavated_depth,
+                        fill=None,
+                        hatch="///",
+                    )
+                )
+                ax_qc.text(0, self.top + 0.1, "predrilled")
 
         fig.suptitle(f"{self.name} {suffix}")
 
@@ -568,19 +586,25 @@ class Cpt(BaseModel):
         data.plot(x="fs", y="z", ax=ax_fs, sharey="col", label="fs [MPa]")
         ax_fs.grid(which="both")
         ax_fs.set_xlim(0, 0.2)
+        ax_fs.set_ylim(z1, z2)
 
         ax_fr = fig.add_subplot(spec[0, 2])
         data.plot(x="fr", y="z", ax=ax_fr, sharey="col", label="fr [%]")
         ax_fr.grid(which="both")
         ax_fr.set_xlim(0, 10.0)
+        ax_fr.set_ylim(z1, z2)
 
         if self.has_u:
             ax_u = fig.add_subplot(spec[0, 3])
             data.plot(x="u", y="z", ax=ax_u, sharey="col", label="u [kPa]")
             ax_u.grid(which="both")
+            ax_u.set_ylim(z1, z2)
 
         # plt.tight_layout()
-        return fig
+        if filename == "":
+            return fig
+        else:
+            fig.savefig(filename)
 
     def filter(
         self,

@@ -5,9 +5,9 @@ from matplotlib.patches import Polygon
 from pydantic import BaseModel
 from copy import deepcopy
 
-from leveelogic.objects.soillayer import SoilLayer
-from leveelogic.models.datamodel import DataModel
-from leveelogic.objects.soilcollection import SoilCollection
+from ..geometry.soillayer import SoilLayer
+from ..models.datamodel import DataModel
+from ..soil.soilcollection import SoilCollection
 
 
 class SoilProfile1GapError(Exception):
