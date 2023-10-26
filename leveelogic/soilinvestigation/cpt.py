@@ -22,7 +22,7 @@ from ..settings import (
 )
 from ..geometry.soilprofile1 import SoilProfile1
 from ..soil.soilcollection import SoilCollection
-from ..settings import CPT_QC_MAX, CPT_FR_MAX
+from ..settings import CPT_QC_MAX, CPT_FR_MAX, BRO_CPT_DOWNLOAD_URL
 
 
 class ConversionType(IntEnum):
@@ -67,13 +67,9 @@ class CptReadError(Exception):
     pass
 
 
-class CptDataError(Exception):
-    """This exception is raised if invalid cpt data is found after reading the Cpt"""
-
-    pass
-
-
 class Cpt(BaseModel):
+    """Class for working with Cone Penetration Tests (gef and xml files)"""
+
     x: float = 0.0
     y: float = 0.0
     xy: Union[float, float] = (0, 0)
@@ -95,7 +91,18 @@ class Cpt(BaseModel):
 
     @classmethod
     def from_bro_id(self, bro_id: str) -> Optional["Cpt"]:
-        URL = f"https://publiek.broservices.nl/sr/cpt/v1/objects/{bro_id}"
+        """Create a Cpt object from a given BRO ID
+
+        Args:
+            bro_id (str): The Cpt id in the BRO system
+
+        Raises:
+            CptReadError: Error if there is a problem downloading / reading the file
+
+        Returns:
+            Cpt: Cpt object if succesful
+        """
+        URL = f"{BRO_CPT_DOWNLOAD_URL}/{bro_id}"
         try:
             s = urlopen(URL).read()
             return Cpt.from_string(s, suffix=".xml")
@@ -106,6 +113,17 @@ class Cpt(BaseModel):
 
     @classmethod
     def from_file(self, filename: str) -> Optional["Cpt"]:
+        """Create a Cpt object from a gef or xml file
+
+        Args:
+            filename (str): The name of the file
+
+        Raises:
+            CptReadError: Error if there is a problem downloading / reading the file
+
+        Returns:
+            Cpt: Cpt object if succesful
+        """
         try:
             data = open(filename, "r", encoding="utf-8", errors="ignore").read()
             return Cpt.from_string(data, Path(filename).suffix.lower())
@@ -114,6 +132,19 @@ class Cpt(BaseModel):
 
     @classmethod
     def from_string(self, data: str, suffix: str) -> Optional["Cpt"]:
+        """Create a Cpt from a given string
+
+        Args:
+            data (str): The data in string format
+            suffix (str): The file suffix (.gef or .xml)
+
+        Raises:
+            CptReadError: Error if there is a problem downloading / reading the file
+
+        Returns:
+            Cpt: Cpt object if succesful
+        """
+
         cpt = Cpt()
         if suffix == ".xml":
             try:
@@ -183,14 +214,29 @@ class Cpt(BaseModel):
 
     @property
     def length(self) -> float:
+        """Returns the length of the Cpt from top to bottom
+
+        Returns:
+            float: The length of the Cpt from top to bottom
+        """
         return self.top - self.bottom
 
     @property
     def lat(self) -> float:
+        """Returns the latitude of the Cpt
+
+        Returns:
+            float: The latitude of the Cpt
+        """
         return self.latlon[0]
 
     @property
     def lon(self) -> float:
+        """Returns the longitude of the Cpt
+
+        Returns:
+            float: The longitude of the Cpt
+        """
         return self.latlon[1]
 
     @property
@@ -201,7 +247,8 @@ class Cpt(BaseModel):
             None
 
         Returns:
-            str: date in format YYYYMMDD"""
+            str: date in format YYYYMMDD
+        """
         if self.startdate != "":
             return self.startdate
         elif self.filedate != "":
@@ -226,11 +273,9 @@ class Cpt(BaseModel):
         """
         Calculate other parameters from the qc and fs values
 
-        Args:
-            None
-
         Returns:
-            None"""
+            None
+        """
         self.fr = []
 
         for qc, fs in zip(self.qc, self.fs):
@@ -273,9 +318,21 @@ class Cpt(BaseModel):
         self.fr = frs
         self.u = u2s
 
-        self.bottom = self.z[-1]
+        self.top = round(self.top, 2)
+        self.bottom = round(self.z[-1], 2)
 
     def _parse_header_line(self, line: str, metadata: dict) -> None:
+        """Internal function to parse GEF header lines
+
+        Args:
+            line (str): The line to parse
+            metadata (dict): The metadata object to fill from the header information
+
+        Raises:
+            ValueError: Possible value errors
+            CptReadError: Possible reading errors
+
+        """
         try:
             args = line.split("=")
             keyword, argline = args[0], args[1]
@@ -353,6 +410,15 @@ class Cpt(BaseModel):
                 self.startdate = ""
 
     def _parse_data_line(self, line: str, metadata: dict) -> None:
+        """Parse a GEF Cpt data line
+
+        Args:
+            line (str): The line to parse
+            metadata (dict): The metadata to use for parsing
+
+        Raises:
+            ValueError: Possible value errors
+        """
         try:
             if len(line.strip()) == 0:
                 return
@@ -406,7 +472,7 @@ class Cpt(BaseModel):
         Args:
             top (float): top boundary of the cpt
             bottom (float): bottom boundary of the cpt
-            inline (bool): apply to self (True) or return a new Cpt (False)
+            inline (bool): apply to self (True) or return a new Cpt (False), defaults to False
 
         Returns:
             Cpt: inline = True -> Copy of the cpt but cut at the given levels else None
@@ -421,7 +487,7 @@ class Cpt(BaseModel):
 
         for i in range(len(self.z) - 1, -1, -1):
             if self.z[i] >= bottom:
-                bottom_idx = i
+                bottom_idx = i + 1
                 break
 
         if top_idx >= bottom_idx:
@@ -446,7 +512,11 @@ class Cpt(BaseModel):
             result.fr = result.fr[top_idx:bottom_idx]
             result.u = result.u[top_idx:bottom_idx]
             result.bottom = result.z[-1]
-            result.top = result.z[0]
+
+            if top > self.top:
+                result.top = self.top
+            else:
+                result.top = result.z[0]
 
             return result
 
@@ -467,9 +537,13 @@ class Cpt(BaseModel):
         Returns:
             np.array: the CPT data as a numpy array"""
         if self.has_u:
-            return np.transpose(np.array([self.z, self.qc, self.fs, self.fr, self.u]))
+            return np.transpose(
+                np.array([self.z, self.qc, self.fs, self.fr, self.u], dtype=float)
+            )
         else:
-            return np.transpose(np.array([self.z, self.qc, self.fs, self.fr]))
+            return np.transpose(
+                np.array([self.z, self.qc, self.fs, self.fr], dtype=float)
+            )
 
     def as_dataframe(self) -> pd.DataFrame:
         """
@@ -487,24 +561,130 @@ class Cpt(BaseModel):
         else:
             return pd.DataFrame(data=data, columns=["z", "qc", "fs", "fr"])
 
+    def plot_Ic(
+        self,
+        filename: str = "",
+        size_x: float = 10,
+        size_y: float = 12,
+    ):
+        fig = Figure(figsize=(size_x, size_y))
+
+        spec = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[2, 1])
+        z1 = round(self.bottom) - 1.0
+        z2 = round(self.top) + 1.0
+        ax_qc = fig.add_subplot(spec[0, 0])
+        ax_qc.plot(self.qc, self.z, "k")
+        ax_qc.set_xlim(0, CPT_QC_MAX)
+        ax_qc.set_ylim(z1, z2)
+        ax_qc.grid(which="both")
+        ax_qc.set_title("Qc [kPa]")
+
+        if self.pre_excavated_depth > 0.0:
+            ax_qc.add_patch(
+                patches.Rectangle(
+                    (0, self.top - self.pre_excavated_depth),
+                    CPT_QC_MAX,
+                    self.pre_excavated_depth,
+                    fill=None,
+                    hatch="///",
+                )
+            )
+            ax_qc.text(0, self.top + 0.1, "predrilled")
+
+        MIc = self.to_z_Ic_list()
+        ax_Ic = fig.add_subplot(spec[0, 1])
+        ax_Ic.add_patch(
+            patches.Rectangle(
+                (1, z1),
+                0.31,
+                (z2 - z1),
+                color="#eb9d4a",
+                fill=True,
+            )
+        )
+
+        ax_Ic.add_patch(
+            patches.Rectangle(
+                (1.31, z1),
+                0.69,
+                (z2 - z1),
+                color="#bba35c",
+                fill=True,
+            )
+        )
+
+        ax_Ic.add_patch(
+            patches.Rectangle(
+                (2.0, z1),
+                0.60,
+                (z2 - z1),
+                color="#7ec4a0",
+                fill=True,
+            )
+        )
+
+        ax_Ic.add_patch(
+            patches.Rectangle(
+                (2.6, z1),
+                0.35,
+                (z2 - z1),
+                color="#479085",
+                fill=True,
+            )
+        )
+
+        ax_Ic.add_patch(
+            patches.Rectangle(
+                (2.95, z1),
+                0.65,
+                (z2 - z1),
+                color="#4a5779",
+                fill=True,
+            )
+        )
+
+        ax_Ic.add_patch(
+            patches.Rectangle(
+                (3.6, z1),
+                0.4,
+                (z2 - z1),
+                color="#b4693f",
+                fill=True,
+            )
+        )
+
+        ax_Ic.set_xlim(1, 4)
+        ax_Ic.set_ylim(z1, z2)
+        ax_Ic.plot(MIc[:, 1], self.z, "k")
+        ax_Ic.grid(which="both")
+        ax_Ic.set_title("SBT index [-]")
+
+        fig.suptitle(f"{self.name}")
+
+        if filename == "":
+            return fig
+        else:
+            fig.savefig(filename)
+
     def plot(
         self,
+        filename: str = "",
         size_x: float = 10,
         size_y: float = 12,
         cptconversionmethod: CptConversionMethod = None,
         minimum_layerheight: float = DEFAULT_CPT_INTERPRETATION_MIN_LAYERHEIGHT,
         peat_friction_ratio: float = DEFAULT_CPT_INTERPRETATION_PEAT_FRICTION_RATIO,
         add_preexcavated_layer: bool = True,
-    ) -> Figure:
+    ) -> Optional[Figure]:
         """Plot the CPT
 
         Args:
+            filename (str): the name of the file to save to, if not set the function will return a Figure object
             size_x (float): figure width in inches, default 8
             size_y (float): figure height in inches, default 12
-            filepath (str): the path to save the file to (filename will be automatic), default "" (no save)
 
         Returns:
-            Figure
+            Figure if filename is not set
         """
         data = self.as_dataframe()
         fig = Figure(figsize=(size_x, size_y))
@@ -519,7 +699,7 @@ class Cpt(BaseModel):
         data.plot(x="qc", y="z", ax=ax_qc, sharey="col", label="qc [MPa]")
         ax_qc.grid(which="both")
         ax_qc.set_xlim(0, CPT_QC_MAX)
-        plt.title(self.name)
+        ax_qc.set_ylim(z1, z2)
 
         suffix = ""
         if cptconversionmethod is not None:
@@ -561,6 +741,18 @@ class Cpt(BaseModel):
                 raise ValueError(
                     f"Unknown interpretation method '{cptconversionmethod}'"
                 )
+        else:  # if applicable plot the preexcavated layer
+            if self.pre_excavated_depth > 0.0:
+                ax_qc.add_patch(
+                    patches.Rectangle(
+                        (0, self.top - self.pre_excavated_depth),
+                        CPT_QC_MAX,
+                        self.pre_excavated_depth,
+                        fill=None,
+                        hatch="///",
+                    )
+                )
+                ax_qc.text(0, self.top + 0.1, "predrilled")
 
         fig.suptitle(f"{self.name} {suffix}")
 
@@ -568,19 +760,25 @@ class Cpt(BaseModel):
         data.plot(x="fs", y="z", ax=ax_fs, sharey="col", label="fs [MPa]")
         ax_fs.grid(which="both")
         ax_fs.set_xlim(0, 0.2)
+        ax_fs.set_ylim(z1, z2)
 
         ax_fr = fig.add_subplot(spec[0, 2])
         data.plot(x="fr", y="z", ax=ax_fr, sharey="col", label="fr [%]")
         ax_fr.grid(which="both")
         ax_fr.set_xlim(0, 10.0)
+        ax_fr.set_ylim(z1, z2)
 
         if self.has_u:
             ax_u = fig.add_subplot(spec[0, 3])
             data.plot(x="u", y="z", ax=ax_u, sharey="col", label="u [kPa]")
             ax_u.grid(which="both")
+            ax_u.set_ylim(z1, z2)
 
         # plt.tight_layout()
-        return fig
+        if filename == "":
+            return fig
+        else:
+            fig.savefig(filename)
 
     def filter(
         self,
@@ -816,7 +1014,16 @@ class Cpt(BaseModel):
 
         return soillayers
 
-    def to_depth_Ic_list(self) -> np.array:
+    def to_z_Ic_list(self) -> np.array:
+        """Convert the reading to the soil behaviour type index Ic
+
+        Note that we do NOT use the normalized cone resistance value!
+        According to https://static.rocscience.cloud/assets/verification-and-theory/Settle3/CPT-Theory-Manual.pdf
+        we use qc = qt even if u2 is available
+
+        Returns:
+            np.array: Numpy array with columns depth [0] and Ic [1]
+        """
         a = self.as_numpy()
         ic = (3.47 - np.log10(a[:, 1] * 1000 / 100)) ** 2 + (
             np.log10(a[:, 3] + 1.22)
@@ -831,6 +1038,7 @@ class Cpt(BaseModel):
         minimum_layerheight: float = DEFAULT_CPT_INTERPRETATION_MIN_LAYERHEIGHT,
         peat_friction_ratio: float = DEFAULT_CPT_INTERPRETATION_PEAT_FRICTION_RATIO,
         add_preexcavated_layer: bool = True,
+        width: float = 50.0,
     ) -> SoilProfile1:
         """Convert a Cpt to a 1D soilprofile
 
@@ -843,7 +1051,7 @@ class Cpt(BaseModel):
         Returns:
             SoilProfile1: One dimension soilprofile
         """
-        soilprofile1 = SoilProfile1(left=0, right=50)
+        soilprofile1 = SoilProfile1(left=0, right=width)
         soilprofile1.lat = self.latlon[0]
         soilprofile1.lon = self.latlon[1]
 

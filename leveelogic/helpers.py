@@ -1,8 +1,6 @@
 from pathlib import Path
 from typing import List, Tuple
 from pyproj import Transformer
-import re
-from .soilinvestigation.cpt import XmlCpt
 from shapely.geometry import Polygon, MultiPolygon, Point, LineString, MultiPoint
 
 from .settings import (
@@ -30,14 +28,6 @@ def hex_color_to_rgb_tuple(s: str) -> Tuple[float, float, float]:
     g = int(f"0x{s[3:5]}", 0)
     b = int(f"0x{s[5:7]}", 0)
     return (r, g, b)
-
-
-def xml_cpt_to_gef_cpt(input_file: str, output_file: str):
-    try:
-        cpt = XmlCpt.from_xml(input_file)
-        cpt.to_gef(f"{output_file}.gef")
-    except Exception as e:
-        raise ValueError(f"Could not parse file '{input_file}', got error '{e}'")
 
 
 def case_insensitive_glob(filepath: str, fileextension: str) -> List[Path]:

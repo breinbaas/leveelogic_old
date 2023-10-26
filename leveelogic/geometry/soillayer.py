@@ -1,9 +1,11 @@
 from typing import List, Tuple
 
-from leveelogic.models.datamodel import DataModel
+from ..models.datamodel import DataModel
 
 
 class SoilLayer(DataModel):
+    """Class to store information of a soil layer"""
+
     top: float
     bottom: float
     soilcode: str
@@ -19,6 +21,11 @@ class SoilLayer(DataModel):
 
     @property
     def mid(self) -> float:
+        """Get the mid point of the layer
+
+        Returns:
+            float: The mid point of the layer
+        """
         return (self.top + self.bottom) / 2.0
 
     def to_points(self, left: float, right: float) -> List[Tuple]:
