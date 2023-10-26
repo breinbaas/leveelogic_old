@@ -1,0 +1,39 @@
+from typing import List, Tuple
+
+from leveelogic.models.datamodel import DataModel
+
+
+class SoilLayer(DataModel):
+    top: float
+    bottom: float
+    soilcode: str
+
+    @property
+    def height(self) -> float:
+        """Get the height of the soillayer
+
+        Returns:
+            float: The height of the soillayer
+        """
+        return self.top - self.bottom
+
+    @property
+    def mid(self) -> float:
+        return (self.top + self.bottom) / 2.0
+
+    def to_points(self, left: float, right: float) -> List[Tuple]:
+        """Convert the soillayer to points of the enclosing polygon
+
+        Args:
+            left (float): The left side of the polygon
+            right (float): The right side of the polygon
+
+        Returns:
+            List[Tuple]: Tuple with topleft, topright, bottom right and bottom left points
+        """
+        return [
+            (left, self.top),
+            (right, self.top),
+            (right, self.bottom),
+            (left, self.bottom),
+        ]
