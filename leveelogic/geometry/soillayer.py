@@ -19,6 +19,11 @@ class SoilLayer(DataModel):
 
     @property
     def mid(self) -> float:
+        """Get the mid point of the layer
+
+        Returns:
+            float: The mid point of the layer
+        """
         return (self.top + self.bottom) / 2.0
 
     def to_points(self, left: float, right: float) -> List[Tuple]:
