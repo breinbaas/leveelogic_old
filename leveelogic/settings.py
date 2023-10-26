@@ -15,6 +15,10 @@ UNIT_WEIGHT_WATER = 9.81
 CPT_QC_MAX = 20.0
 CPT_FR_MAX = 10.0
 
+# URLs
+
+BRO_CPT_DOWNLOAD_URL = "https://publiek.broservices.nl/sr/cpt/v1/objects"
+
 # soil code translation dictionaries
 nen5104_main_soilname_dict = {
     "G": "grind",
