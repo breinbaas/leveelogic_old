@@ -11,9 +11,12 @@ UNHANDLED_SOILCODE_NAME = "unknown"
 # Unit weight for water
 UNIT_WEIGHT_WATER = 9.81
 
-# Max qc for plots
+# Max Qc and FR for plots
 CPT_QC_MAX = 20.0
 CPT_FR_MAX = 10.0
+
+# URLs
+BRO_CPT_DOWNLOAD_URL = "https://publiek.broservices.nl/sr/cpt/v1/objects"
 
 # soil code translation dictionaries
 nen5104_main_soilname_dict = {

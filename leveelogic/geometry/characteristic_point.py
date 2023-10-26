@@ -42,5 +42,7 @@ CharacteristicPointNames = {
 
 
 class CharacteristicPoint(DataModel):
+    """Class to store characteristic point information"""
+
     l: float
     point_type: CharacteristicPointType = CharacteristicPointType.NONE

@@ -191,6 +191,8 @@ class SoilCollectionError(Exception):
 
 
 class SoilCollection(DataModel):
+    """Class to store a colletion of soil objects"""
+
     soils: List[Soil] = [v for _, v in DEFAULT_CPT_INTERPRETATION_SOILCODES.items()]
     aliases: Dict = {}
 
