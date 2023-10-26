@@ -5,6 +5,8 @@ from ..helpers import hex_color_to_rgb_tuple
 
 
 class Soil(DataModel):
+    """Class to store basic soil data"""
+
     code: str
     color: str
     y_dry: float

@@ -68,6 +68,8 @@ class CptReadError(Exception):
 
 
 class Cpt(BaseModel):
+    """Class for working with Cone Penetration Tests (gef and xml files)"""
+
     x: float = 0.0
     y: float = 0.0
     xy: Union[float, float] = (0, 0)

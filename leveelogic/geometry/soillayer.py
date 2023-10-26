@@ -4,6 +4,8 @@ from ..models.datamodel import DataModel
 
 
 class SoilLayer(DataModel):
+    """Class to store information of a soil layer"""
+
     top: float
     bottom: float
     soilcode: str

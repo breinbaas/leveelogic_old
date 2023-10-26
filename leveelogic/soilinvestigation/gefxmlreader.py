@@ -26,6 +26,8 @@ import xml.etree.ElementTree as ET
 
 @dataclass
 class XmlCpt:
+    """XmlCpt code by "Thomas van der Linden"""
+
     def __init__(self):
         self.easting = None
         self.northing = None
