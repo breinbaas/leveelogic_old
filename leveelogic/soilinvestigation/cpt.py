@@ -67,12 +67,6 @@ class CptReadError(Exception):
     pass
 
 
-class CptDataError(Exception):
-    """This exception is raised if invalid cpt data is found after reading the Cpt"""
-
-    pass
-
-
 class Cpt(BaseModel):
     x: float = 0.0
     y: float = 0.0
