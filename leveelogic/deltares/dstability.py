@@ -5,6 +5,8 @@ from shapely.geometry import Polygon
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 from typing import Dict, List, Tuple, Union, BinaryIO, Optional
+from geolib.geometry.one import Point
+from geolib.models.dstability.internal import PersistableHeadLine
 
 from leveelogic.geometry.characteristic_point import (
     CharacteristicPoint,
@@ -75,22 +77,51 @@ class DStability(BaseModel):
         return min([p[1] for p in self.points])
 
     @property
-    def phreatic_line(self) -> List[Tuple[float, float]]:
-        """Get the points of the current phreatic line
-
-        Raises:
-            ValueError: Raises an error if no phreatic line is found
+    def phreatic_line(self) -> Optional[PersistableHeadLine]:
+        """Get the phreatic line object
 
         Returns:
-            List[Tuple[float, float]]: _description_
+            Optional[PersistableHeadLine]: The preathic line or None if not set
         """
         waternet = self.model.waternets[
             0
         ]  # [0] is that correct? don't think so! should depend on the current geom
         for headline in waternet.HeadLines:
             if headline.Id == waternet.PhreaticLineId:
-                return [(p.X, p.Z) for p in headline.Points]
-        raise ValueError("No phreatic line found")
+                return headline
+
+        return None
+
+    @property
+    def phreatic_line_points(self) -> List[Tuple[float, float]]:
+        """Get the points of the current phreatic line
+
+        Raises:
+            ValueError: Raises an error if no phreatic line is found
+
+        Returns:
+            List[Tuple[float, float]]: The points of the phreatic line (x,z)
+        """
+        pl = self.phreatic_line
+        if pl is None:
+            return []
+
+    def set_phreatic_line(self, points: List[Tuple[float, float]]):
+        """Set the phreatic line from the given points
+
+        Args:
+            points (List[Tuple[float, float]]): A list of points
+        """
+        # TODO this is still far from ideal because it leave the old
+        # pl line. That has no influence on the result but it looks bad
+
+        self.model.add_head_line(
+            [Point(x=p[0], z=p[1]) for p in points],
+            "Phreatic line",
+            is_phreatic_line=True,
+            scenario_index=self.current_scenario_index,
+            stage_index=self.current_stage_index,
+        )
 
     def _post_process(self):
         """Do some post processing stuff to set properties and save time"""
@@ -220,6 +251,7 @@ class DStability(BaseModel):
             for cp in self.characteristic_points:
                 if cp.point_type == point_type:
                     result = cp
+                    break
         else:
             result = [
                 cp for cp in self.characteristic_points if cp.point_type == point_type

@@ -29,7 +29,7 @@ class AlgorithmBerm(Algorithm):
         # do we have a valid x coordinate
         if cp.x < self.ds.left or cp.x > self.ds.right:
             raise ValueError(
-                f"AlgorithmBerm got x_toe ({self.x_toe}) that is not within the boundary of the geometry"
+                f"AlgorithmBerm got x coordinate of the left toe point at ({cp.x}) that is not within the boundary of the geometry"
             )
 
     def _execute(self) -> DStability:
