@@ -6,14 +6,14 @@ from ..models.datamodel import DataModel
 class CharacteristicPointType(IntEnum):
     NONE = 0
 
-    START_RIVER = 10
-    END_RIVER = 11
+    START_SURFACE = 10  # maaiveld buitenwaarts
+    END_SURFACE = 11  # maaiveld binnenwaarts
 
     REFERENCE_POINT = 20
-    CREST_LEFT_BOTTOM = 21
-    CREST_LEFT_TOP = 22
-    CREST_RIGHT_TOP = 23
-    CREST_RIGHT_BOTTOM = 24
+    TOE_LEFT = 21
+    CREST_LEFT = 22
+    CREST_RIGHT = 23
+    TOE_RIGHT = 24
 
     START_ROAD = 30
     END_ROAD = 31
@@ -26,13 +26,13 @@ class CharacteristicPointType(IntEnum):
 
 CharacteristicPointNames = {
     CharacteristicPointType.NONE: "none",
-    CharacteristicPointType.START_RIVER: "start river",
-    CharacteristicPointType.END_RIVER: "end river",
+    CharacteristicPointType.START_SURFACE: "start surface",
+    CharacteristicPointType.END_SURFACE: "end surface",
     CharacteristicPointType.REFERENCE_POINT: "reference point",
-    CharacteristicPointType.CREST_LEFT_BOTTOM: "crest left bottom",
-    CharacteristicPointType.CREST_LEFT_TOP: "crest left top",
-    CharacteristicPointType.CREST_RIGHT_TOP: "crest right top",
-    CharacteristicPointType.CREST_RIGHT_BOTTOM: "crest right bottom",
+    CharacteristicPointType.TOE_LEFT: "toe left",
+    CharacteristicPointType.CREST_LEFT: "crest left",
+    CharacteristicPointType.CREST_RIGHT: "crest right",
+    CharacteristicPointType.TOE_RIGHT: "toe right",
     CharacteristicPointType.START_ROAD: "start road",
     CharacteristicPointType.END_ROAD: "end road",
     CharacteristicPointType.START_POLDER: "start polder",
@@ -44,5 +44,5 @@ CharacteristicPointNames = {
 class CharacteristicPoint(DataModel):
     """Class to store characteristic point information"""
 
-    l: float
-    point_type: CharacteristicPointType = CharacteristicPointType.NONE
+    x: float
+    point_type: CharacteristicPointType

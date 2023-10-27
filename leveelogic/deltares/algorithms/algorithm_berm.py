@@ -4,11 +4,11 @@ from geolib.geometry import Point
 from ..dstability import DStability
 from .algorithm import Algorithm
 from ...helpers import polyline_polyline_intersections
+from ...geometry.characteristic_point import CharacteristicPointType
 
 
 class AlgorithmBerm(Algorithm):
     soilcode: str
-    x_toe: float
     slope_top: float
     slope_bottom: float
     initial_width: float
@@ -19,8 +19,15 @@ class AlgorithmBerm(Algorithm):
         if not self.ds.has_soilcode(self.soilcode):
             raise ValueError(f"AlgorithmBerm got an invalid soilcode '{self.soilcode}'")
 
+        # do we have the toe char points
+        cp = self.ds.get_characteristic_point(CharacteristicPointType.TOE_RIGHT)
+        if cp is None:
+            raise ValueError(
+                "AlgorithmBerm got a model without the characteristic point of the toe of the levee"
+            )
+
         # do we have a valid x coordinate
-        if self.x_toe < self.ds.left or self.x_toe > self.ds.right:
+        if cp.x < self.ds.left or cp.x > self.ds.right:
             raise ValueError(
                 f"AlgorithmBerm got x_toe ({self.x_toe}) that is not within the boundary of the geometry"
             )
@@ -28,7 +35,7 @@ class AlgorithmBerm(Algorithm):
     def _execute(self) -> DStability:
         ds = deepcopy(self.ds)
 
-        xt = self.x_toe
+        xt = self.ds.get_characteristic_point(CharacteristicPointType.TOE_RIGHT).x
         wi = self.initial_width
         hi = self.initial_height
 

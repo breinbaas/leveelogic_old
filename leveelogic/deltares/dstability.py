@@ -4,10 +4,16 @@ from pathlib import Path
 from shapely.geometry import Polygon
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
-from typing import Dict, List, Tuple, Union, BinaryIO
+from typing import Dict, List, Tuple, Union, BinaryIO, Optional
+
+from leveelogic.geometry.characteristic_point import (
+    CharacteristicPoint,
+    CharacteristicPointType,
+)
 
 
 class DStability(BaseModel):
+    characteristic_points: List[CharacteristicPoint] = []
     model: gl.DStabilityModel = gl.DStabilityModel()
     current_scenario_index: int = 0
     current_stage_index: int = 0
@@ -152,6 +158,76 @@ class DStability(BaseModel):
         # get the index of the rightmost point
         idx_right = self.surface.index(rightmost_point)
         self.surface = self.surface[: idx_right + 1]
+
+    def set_characteristic_point(self, x: float, point_type: CharacteristicPointType):
+        """Add a characteristic point to the model, this will also check if you are trying to
+        add a point that is already in the model. If so it will replace the old one. This only
+        applies to points that can only have one in the model
+
+        Args:
+            x (float): The x coordinate
+            characteristic_point_type (CharacteristicPointType): The type of characteristic point
+        """
+        # there can only be one of the following types so if this is about them
+        # then just change the x value
+        if point_type in [
+            CharacteristicPointType.TOE_LEFT,
+            CharacteristicPointType.CREST_LEFT,
+            CharacteristicPointType.REFERENCE_POINT,
+            CharacteristicPointType.CREST_RIGHT,
+            CharacteristicPointType.TOE_RIGHT,
+            CharacteristicPointType.START_POLDER,
+            CharacteristicPointType.START_SURFACE,
+            CharacteristicPointType.END_SURFACE,
+        ]:
+            if self.get_characteristic_point(point_type) is not None:
+                for i in range(len(self.characteristic_points)):
+                    if self.characteristic_points[i].point_type == point_type:
+                        self.characteristic_points[i].x = x
+            else:
+                self.characteristic_points.append(
+                    CharacteristicPoint(x=x, point_type=point_type)
+                )
+        else:
+            self.characteristic_points.append(
+                CharacteristicPoint(x=x, point_type=point_type)
+            )
+
+    def get_characteristic_point(
+        self, point_type: CharacteristicPointType
+    ) -> Optional[Union[CharacteristicPoint, List[CharacteristicPoint]]]:
+        """Get a (list of) characteristic points on this model based on the given point type, if the type is of
+        toe left, toe right, crest left, crest right, reference point, start polder, start and end surface
+        the result is a single point, all other points can be lists. If no point(s) is / are found the result will be None
+
+        Args:
+            characteristic_point_type (CharacteristicPointType): The type of characteristic point
+
+        Returns:
+           Optional[Union[CharacteristicPoint, List[CharacteristicPoint]]]: A list with the points or a single point or None
+        """
+        result = None
+        if point_type in [
+            CharacteristicPointType.TOE_LEFT,
+            CharacteristicPointType.CREST_LEFT,
+            CharacteristicPointType.REFERENCE_POINT,
+            CharacteristicPointType.CREST_RIGHT,
+            CharacteristicPointType.TOE_RIGHT,
+            CharacteristicPointType.START_POLDER,
+            CharacteristicPointType.START_SURFACE,
+            CharacteristicPointType.END_SURFACE,
+        ]:
+            for cp in self.characteristic_points:
+                if cp.point_type == point_type:
+                    result = cp
+        else:
+            result = [
+                cp for cp in self.characteristic_points if cp.point_type == point_type
+            ]
+            if result == []:
+                result = None
+
+        return result
 
     def surface_points_between(
         self, left: float, right: float
