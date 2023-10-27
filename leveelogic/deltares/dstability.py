@@ -11,7 +11,7 @@ class DStability(BaseModel):
     model: gl.DStabilityModel = gl.DStabilityModel()
     current_scenario_index: int = 0
     current_stage_index: int = 0
-    soillayers: Dict = {}
+    soillayers: List[Dict] = []
     soils: Dict = {}
     points: List[Tuple[float, float]] = []
     boundary: List[Tuple[float, float]] = []
@@ -119,6 +119,9 @@ class DStability(BaseModel):
             )
 
         self.points = [(p.X, p.Z) for p in points]
+
+        # now remove the ids of the soils
+        self.soils = [d for d in self.soils.values()]
 
         # get the surface
         # merge all polygons and return the boundary of that polygon
@@ -230,9 +233,9 @@ class DStability(BaseModel):
             soilcode (str): The soilcode to check for
 
         Returns:
-            bool: Trie if the soilcode is available
+            bool: True if the soilcode is available
         """
-        self.model.datastructure.soils.has_soil_code(soilcode)
+        return soilcode in [d["code"] for d in self.soils]
 
     def serialize(self, location: Union[FilePath, DirectoryPath, BinaryIO]):
         """Serialize the model to a file

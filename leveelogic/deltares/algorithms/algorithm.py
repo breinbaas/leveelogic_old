@@ -18,7 +18,7 @@ class Algorithm(BaseModel, metaclass=abc.ABCMeta):
     You will need to implement the abstract _execute function
     """
 
-    model: DStability
+    ds: DStability
 
     def execute(self):
         try:
