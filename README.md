@@ -14,7 +14,7 @@ For users;
  
 * [X] Cpts
 * [ ] Boreholes
-* [ ] DStability interaction / serialization / parsing / editing
+* [X] DStability interaction / serialization / parsing / editing
 * [ ] Crosssections
 * [ ] Geotechnical profiles
 
@@ -152,6 +152,47 @@ cpt.plot_Ic("cpt_Ic_plot.png")
 
 **DISCLAIMER**
 The interpretation options of CPTs are endless and can be very specific for the region you are working in. For me these interpretation methods have proven their value but always check if they work for you!
+
+## DStability
+
+The DStability part of the library deals with the DGeo-Stability application for levee stability assessments. You can read and write stix files and use the algorithms to change properties in the calculations. I've chosen for a kind of modular approach where it is possible to chain algorithms. This enables people to write (and share!) their own algorithms. So it might seem a bit complicated but that's for a reason only time will tell is useful ;-)
+
+Sometimes an algorithm needs a so called characteristic point. This idea was taken from the DAM (Dike Analysis Module) by Deltares. A levee has some specific points like a crest, ditches etc. LeveeLogic makes use of this system to enable users that will write their own algorithms to take advantage of. It is much easier to add a characteristic point to a model and use that in all the algorithms you use than defining that point again and again for each algorithm.
+
+For developers; always inherit your own algorithm from the Algorithm class. Implement the _check function which should throw exceptions if the input is incorrect and always return a copy of the original model so people can keep their original ones. See the code for some examples.
+
+So far the following algorithms have been added;
+
+### Algorithm berm
+
+Add a berm to your DStability model. Here's an example;
+
+```python
+ds = DStability.from_stix("tests/testdata/stix/simple_geometry.stix")
+ds.set_characteristic_point(25, point_type=CharacteristicPointType.TOE_RIGHT)
+alg = AlgorithmBerm(
+    ds=ds,
+    soilcode="H_Rk_ko", # this code needs to be in the calculation model!
+    slope_top=10, # slope on top of the berm
+    slope_bottom=1, # slope on the right side of the berm (slope to the bottom) 
+    initial_height=2.0, # the initial height from the given TOE_RIGHT characteristic point
+    initial_width=6.0, # initial width
+)
+ds = alg.execute() # note that you get a copy of your model (but here I overwrite the original one)
+ds.serialize("tests/testdata/output/simple_geometry_berm.stix") # write to file
+```
+
+You will now have a berm added to your original calculation
+
+![Algorithm berm](img/algorithm_berm.png)
+
+**Note** In time the algorithm will handle more complex situations as well as automated berm growth
+
+### Algorithm move
+
+### Algorithm phreatic line
+
+
 
 ## Credits
 
