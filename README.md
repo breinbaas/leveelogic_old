@@ -14,7 +14,7 @@ For users;
  
 * [X] Cpts
 * [ ] Boreholes
-* [ ] DStability interaction / serialization / parsing / editing
+* [X] DStability interaction / serialization / parsing / editing
 * [ ] Crosssections
 * [ ] Geotechnical profiles
 
@@ -153,9 +153,88 @@ cpt.plot_Ic("cpt_Ic_plot.png")
 **DISCLAIMER**
 The interpretation options of CPTs are endless and can be very specific for the region you are working in. For me these interpretation methods have proven their value but always check if they work for you!
 
+## DStability
+
+The DStability part of the library deals with the DGeo-Stability application for levee stability assessments. You can read and write stix files and use the algorithms to change properties in the calculations. I've chosen for a kind of modular approach where it is possible to chain algorithms. This enables people to write (and share!) their own algorithms. So it might seem a bit complicated but that's for a reason only time will tell is useful ;-)
+
+Sometimes an algorithm needs a so called characteristic point. This idea was taken from the DAM (Dike Analysis Module) by Deltares. A levee has some specific points like a crest, ditches etc. LeveeLogic makes use of this system to enable users that will write their own algorithms to take advantage of. It is much easier to add a characteristic point to a model and use that in all the algorithms you use than defining that point again and again for each algorithm.
+
+For developers; always inherit your own algorithm from the Algorithm class. Implement the _check function which should throw exceptions if the input is incorrect and always return a copy of the original model so people can keep their original ones. See the code for some examples.
+
+So far the following algorithms have been added;
+
+### Algorithm berm
+
+Add a berm to your DStability model. Here's an example;
+
+```python
+ds = DStability.from_stix("tests/testdata/stix/simple_geometry.stix")
+ds.set_characteristic_point(25, point_type=CharacteristicPointType.TOE_RIGHT)
+alg = AlgorithmBerm(
+    ds=ds,
+    soilcode="H_Rk_ko", # this code needs to be in the calculation model!
+    slope_top=10, # slope on top of the berm
+    slope_bottom=1, # slope on the right side of the berm (slope to the bottom) 
+    initial_height=2.0, # the initial height from the given TOE_RIGHT characteristic point
+    initial_width=6.0, # initial width
+)
+ds = alg.execute() # note that you get a copy of your model (but here I overwrite the original one)
+ds.serialize("tests/testdata/output/simple_geometry_berm.stix") # write to file
+```
+
+**Note** In time the algorithm will handle more complex situations as well as automated berm growth
+
+You will now have a berm added to your original calculation
+
+![Algorithm berm](img/algorithm_berm.png)
+
+
+### Algorithm move
+
+The move algorithm will simple move all points in the given x direction. So far I have not see a use case where the y location of all points needed to be changed but it is easy to implement if someone wants it really bad. The reason for creating this code is that it is handy to set the reference point of the levee at x=0.0 and if that was not the case this algorithm can be used to make that happen. Here's some sample code;
+
+```python
+ds = DStability.from_stix("simple_geometry.stix")
+alg = AlgorithmMove(ds=ds, dx=10.0)
+ds = alg.execute()
+```
+
+Now all points have moved 10 meters in the x direction.
+
+### Algorithm phreatic line
+
+The algorithm for the phreatic line generates a phreatic line based on the given input parameters. 
+
+**Note** Currently it is not possible to remove headlines so if your model already had a phreatic line you will get two headlines. Fortunaltely the old phreatic line will not have any effect on the calculation but it might look funny. I will look into a way to remove the old headline later.
+
+Here is an example;
+
+```python
+ds = DStability.from_stix("simple_geometry_no_pl.stix")
+ds.set_characteristic_point(
+    10, point_type=CharacteristicPointType.REFERENCE_POINT
+)
+alg = AlgorithmPhreaticLine(
+    ds=ds,
+    waterlevel=4.0,
+    waterlevel_polder=-11.0,
+    waterlevel_offset=0.5,
+    offset_points=[(1.0, 0.0), (2.0, -1.0)],
+)
+ds = alg.execute()
+```
+
+Explanation; you need to set the reference point because the phreatic line will have the waterlevel until that point, then follow the offset points (if set, in this case it will move 1m right and 0 down and then again 1m right (total 2m) and 1m down). It will also make sure that there is always 0.5m difference between the surface line and the phreatic line. It is still possible that with the 'right' parameters you mess up the phreatic line so always make sure to check the output.
+
+Here's an image of a possible result;
+
+![Algorithm berm](img/algorithm_phreatic_line.png)
+
+**Note** Yep, still working on the ditch, it's an easy fix but I wanted to have the preliminary version out
+
 ## Credits
 
 Credits go to;
 
 * Deltares for the d-geolib package
-* Thomas van der Linden for the gefxmlreader (I hate xml parsing ;-)
+* Thomas van der Linden for the gefxmlreader (I really do not like xml parsing ;-)
