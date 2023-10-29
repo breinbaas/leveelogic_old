@@ -132,6 +132,12 @@ class DStability(BaseModel):
         polygons = []
         points = []
 
+        self.soillayers = []
+        self.soils = {}
+        self.points = []
+        self.boundary = []
+        self.surface = []
+
         for soil in self.model.soils.Soils:
             self.soils[soil.Id] = {
                 "code": soil.Code,
