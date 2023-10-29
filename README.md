@@ -182,21 +182,59 @@ ds = alg.execute() # note that you get a copy of your model (but here I overwrit
 ds.serialize("tests/testdata/output/simple_geometry_berm.stix") # write to file
 ```
 
+**Note** In time the algorithm will handle more complex situations as well as automated berm growth
+
 You will now have a berm added to your original calculation
 
 ![Algorithm berm](img/algorithm_berm.png)
 
-**Note** In time the algorithm will handle more complex situations as well as automated berm growth
 
 ### Algorithm move
 
+The move algorithm will simple move all points in the given x direction. So far I have not see a use case where the y location of all points needed to be changed but it is easy to implement if someone wants it really bad. The reason for creating this code is that it is handy to set the reference point of the levee at x=0.0 and if that was not the case this algorithm can be used to make that happen. Here's some sample code;
+
+```python
+ds = DStability.from_stix("simple_geometry.stix")
+alg = AlgorithmMove(ds=ds, dx=10.0)
+ds = alg.execute()
+```
+
+Now all points have moved 10 meters in the x direction.
+
 ### Algorithm phreatic line
 
+The algorithm for the phreatic line generates a phreatic line based on the given input parameters. 
 
+**Note** Currently it is not possible to remove headlines so if your model already had a phreatic line you will get two headlines. Fortunaltely the old phreatic line will not have any effect on the calculation but it might look funny. I will look into a way to remove the old headline later.
+
+Here is an example;
+
+```python
+ds = DStability.from_stix("simple_geometry_no_pl.stix")
+ds.set_characteristic_point(
+    10, point_type=CharacteristicPointType.REFERENCE_POINT
+)
+alg = AlgorithmPhreaticLine(
+    ds=ds,
+    waterlevel=4.0,
+    waterlevel_polder=-11.0,
+    waterlevel_offset=0.5,
+    offset_points=[(1.0, 0.0), (2.0, -1.0)],
+)
+ds = alg.execute()
+```
+
+Explanation; you need to set the reference point because the phreatic line will have the waterlevel until that point, then follow the offset points (if set, in this case it will move 1m right and 0 down and then again 1m right (total 2m) and 1m down). It will also make sure that there is always 0.5m difference between the surface line and the phreatic line. It is still possible that with the 'right' parameters you mess up the phreatic line so always make sure to check the output.
+
+Here's an image of a possible result;
+
+![Algorithm berm](img/algorithm_phreatic_line.png)
+
+**Note** Yep, still working on the ditch, it's an easy fix but I wanted to have the preliminary version out
 
 ## Credits
 
 Credits go to;
 
 * Deltares for the d-geolib package
-* Thomas van der Linden for the gefxmlreader (I hate xml parsing ;-)
+* Thomas van der Linden for the gefxmlreader (I really do not like xml parsing ;-)
