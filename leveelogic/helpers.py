@@ -337,7 +337,6 @@ def line_polyline_intersections(
 
     Returns the intersections sorted on x
     """
-    # TODO
     surface_line = LineString(polyline_points)
     pp_line = LineString([(x1, y1), (x2, y2)])
 

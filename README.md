@@ -2,7 +2,7 @@
 
 Code for levee assessments by Rob van Putten | LeveeLogic
 
-This code will slowly replace our old code and make it publicly available under the GPLv3 license. This code is based on years of experience in levee assessments and automation and makes use of some spezialized packages like d-geolib and other code that has been created by the community of Dutch geotechnical engineers. One thing; **don't blame me or my code if your structure fails.. never trust a computer (too much)** ;-)
+This code will slowly replace our old code and make it publicly available under the GPLv3 license. This code is based on years of experience in levee assessments and automation and makes use of some spezialized packages like d-geolib and other code that has been created by the community of Dutch geotechnical engineers. One thing; **don't blame me or my code if your structure fails.. never trust a computer (too much) without a decent amount of experience** ;-)
 
 **TIP** You can learn a lot of how to use the leveelogic package by looking at the test code which you can find under the tests/ path
 
@@ -52,6 +52,8 @@ cpt = Cpt.from_bro_id("CPT000000097074")
 ```
 
 You just need to find the CPT id online and yes, we will be adding the option to download CPTs based on a geographical location later.
+
+**NOTE** Go easy on the BRO API.. you never know when they will add an API key if things get out of hand so only download a reasonable amount of data
 
 #### Interpretation
 

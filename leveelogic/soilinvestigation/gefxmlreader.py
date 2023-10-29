@@ -98,7 +98,6 @@ class XmlCpt:
                         self.data = child.text
 
             elif "removedLayer" in element.tag:
-                # TODO: maak hier van een Bore() en plot die ook
                 self.removedlayers = {
                     re.sub(r"{.*}", "", p.tag): re.sub(r"\n\s*", "", p.text)
                     for p in element.iter()
@@ -151,7 +150,6 @@ class XmlCpt:
     def check_depth(self):
         # soms is er geen diepte, maar wel sondeerlengte aanwezig
         # sondeerlengte als diepte gebruiken is goed genoeg als benadering
-        # TODO: onderstaande blok voor diepte correctie is niet gecheckt op correctheid
         if "depth" not in self.data.columns or self.data["depth"].isna().all():
             # verwijder de lege kolommen om het vervolg eenvoudiger te maken
             self.data.dropna(axis=1, how="all", inplace=True)
@@ -207,7 +205,6 @@ class XmlCpt:
 
 @dataclass
 class XmlBorehole:
-    # TODO: uitbreiden voor BHR-P en BHR-G, deels werkt het al
     def __init__(self):
         self.projectid = None
         self.projectname = None
@@ -293,9 +290,7 @@ class XmlBorehole:
         root = tree.getroot()
 
         for element in root.iter():
-            if (
-                "broId" in element.tag or "requestReference" in element.tag
-            ):  # TODO: er zijn ook boringen zonder broId, met requestReference dat toevoegen levert een vreemde waarde voor testid
+            if "broId" in element.tag or "requestReference" in element.tag:
                 self.testid = element.text
 
             if "deliveredLocation" in element.tag:
@@ -334,7 +329,6 @@ class XmlBorehole:
                         descriptionLocation = child.text
                         soillayers = []
                     elif "layer" in child.tag:
-                        # TODO: onderscheid maken tussen veld en labbeschrijving
                         soillayers.append(
                             {
                                 re.sub(r"{.*}", "", p.tag): re.sub(r"\s*", "", p.text)
@@ -366,7 +360,6 @@ class XmlBorehole:
         }
 
         for descriptionLocation, soillayers in self.soillayers.items():
-            # TODO: mogelijk verwarrend om soillayers en self.soillayers te combineren
             # voeg de componenten toe t.b.v. plot
             self.soillayers[descriptionLocation] = self.add_components(soillayers)
 
@@ -445,7 +438,6 @@ class XmlBorehole:
                 sorted({v: i for i, v in enumerate(value)}.items(), reverse=True)
             )
 
-        # TODO: soilNameNEN5104 specialMaterial
         soillayers["soilName"] = np.where(
             soillayers["geotechnicalSoilName"].isna(),
             "NBE",
