@@ -28,7 +28,13 @@ class AlgorithmTree(Algorithm):
     angle_of_distribution: float = 0
 
     def _check_input(self):
-        pass
+        if (
+            self.x - self.width_of_root_zone / 2.0 < self.ds.left
+            or self.x + self.width_of_root_zone / 2.0 > self.ds.right
+        ):
+            raise ValueError(
+                f"The tree location with the given width of the root zone exceeds the limits of the geometry."
+            )
 
     def _execute(self) -> DStability:
         ds = deepcopy(self.ds)
