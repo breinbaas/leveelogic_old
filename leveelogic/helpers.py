@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import List, Tuple
 from pyproj import Transformer
 from shapely.geometry import Polygon, MultiPolygon, Point, LineString, MultiPoint
+import re
 
 from .settings import (
     nen5104_sand_dict,
