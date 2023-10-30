@@ -1,5 +1,7 @@
 ## LeveeLogic
 
+[![Python package](https://github.com/breinbaas/leveelogic/actions/workflows/python-package.yml/badge.svg?branch=master)](https://github.com/breinbaas/leveelogic/actions/workflows/python-package.yml)
+
 Code for levee assessments by Rob van Putten | LeveeLogic
 
 This code will slowly replace our old code and make it publicly available under the GPLv3 license. This code is based on years of experience in levee assessments and automation and makes use of some spezialized packages like d-geolib and other code that has been created by the community of Dutch geotechnical engineers. One thing; **don't blame me or my code if your structure fails.. never trust a computer (too much) without a decent amount of experience** ;-)
