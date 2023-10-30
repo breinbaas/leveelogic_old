@@ -188,6 +188,23 @@ You will now have a berm added to your original calculation
 
 ![Algorithm berm](img/algorithm_berm.png)
 
+
+
+### Algorithm excavation
+
+Add an excavation to the geometry. This will follow the surface. Here's some example code where we want to have an excavation at x coordinate 25m with a width of 4 meters and a depth of 1.5 meters;
+
+```python
+ds = DStability.from_stix("simple_geometry.stix")
+alg = AlgorithmExcavation(ds=ds, x=25.0, width=4.0, depth=1.5)
+ds = alg.execute()
+ds.serialize("simple_geometry_excavation.stix")
+```
+
+![Algorithm excavantion](img/algorithm_excavation_tree.png)
+
+**Note** the image also shows the result of adding a treeload using the AlgorithmTree.
+
 ### Algorithm mirror
 
 The mirror algorithm simply mirrors the geometry. This comes in handy since most of the leveelogic logic is based on an orientation where the river is on the left side of the geometry and the polder on the right side. Here's the sample code;
@@ -241,6 +258,27 @@ Here's an image of a possible result;
 ![Algorithm berm](img/algorithm_phreatic_line.png)
 
 **Note** Yep, still working on the ditch, it's an easy fix but I wanted to have the preliminary version out
+
+### Algorithm tree
+
+Add a tree (with load) at a given location. Here's some sample code;
+
+```python
+ds = DStability.from_stix("simple_geometry.stix")
+alg = AlgorithmTree(
+    ds=ds,
+    x=20.0,
+    tree_height=10.0,
+    width_of_root_zone=6.0,
+    load=10.0,
+    wind_force=15.0,
+    angle_of_distribution=30,
+)
+ds = alg.execute()
+ds.serialize("simple_geometry_tree_load.stix")
+```
+
+You can see a result of this algorithm in the image from the Algorithm excavation.
 
 ## Credits
 
