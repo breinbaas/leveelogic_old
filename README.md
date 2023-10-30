@@ -188,6 +188,16 @@ You will now have a berm added to your original calculation
 
 ![Algorithm berm](img/algorithm_berm.png)
 
+### Algorithm mirror
+
+The mirror algorithm simply mirrors the geometry. This comes in handy since most of the leveelogic logic is based on an orientation where the river is on the left side of the geometry and the polder on the right side. Here's the sample code;
+
+```python
+ds = DStability.from_stix("simple_geometry.stix")
+alg = AlgorithmMirror(ds=ds)
+ds = alg.execute()
+ds.serialize("simple_geometry_mirrored.stix")
+```
 
 ### Algorithm move
 
