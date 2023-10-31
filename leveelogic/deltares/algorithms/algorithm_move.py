@@ -50,9 +50,11 @@ class AlgorithmMove(Algorithm):
             if cs.Bishop is not None:
                 cs.Bishop.Circle.Center.X += self.dx
             if cs.BishopBruteForce is not None:
-                cs.BishopBruteForce.SearchGrid.BottomLeft.X += self.dx
-                cs.BishopBruteForce.SlipPlaneConstraints.XLeftZoneA += self.dx
-                cs.BishopBruteForce.SlipPlaneConstraints.XLeftZoneB += self.dx
+                if cs.BishopBruteForce.SearchGrid.BottomLeft is not None:
+                    cs.BishopBruteForce.SearchGrid.BottomLeft.X += self.dx
+                if cs.BishopBruteForce.SlipPlaneConstraints is not None:
+                    cs.BishopBruteForce.SlipPlaneConstraints.XLeftZoneA += self.dx
+                    cs.BishopBruteForce.SlipPlaneConstraints.XLeftZoneB += self.dx
             if cs.Spencer.SlipPlane is not None:
                 for point in cs.Spencer.SlipPlane:
                     point.X += self.dx
