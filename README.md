@@ -207,17 +207,6 @@ ds.serialize("simple_geometry_excavation.stix")
 
 **Note** the image also shows the result of adding a treeload using the AlgorithmTree.
 
-### Algorithm mirror
-
-The mirror algorithm simply mirrors the geometry. This comes in handy since most of the leveelogic logic is based on an orientation where the river is on the left side of the geometry and the polder on the right side. Here's the sample code;
-
-```python
-ds = DStability.from_stix("simple_geometry.stix")
-alg = AlgorithmMirror(ds=ds)
-ds = alg.execute()
-ds.serialize("simple_geometry_mirrored.stix")
-```
-
 ### Algorithm move
 
 The move algorithm will simple move all points in the given x direction. So far I have not see a use case where the y location of all points needed to be changed but it is easy to implement if someone wants it really bad. The reason for creating this code is that it is handy to set the reference point of the levee at x=0.0 and if that was not the case this algorithm can be used to make that happen. Here's some sample code;
