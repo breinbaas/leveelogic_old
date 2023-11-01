@@ -161,9 +161,21 @@ Sometimes an algorithm needs a so called characteristic point. This idea was tak
 
 For developers; always inherit your own algorithm from the Algorithm class. Implement the _check function which should throw exceptions if the input is incorrect and always return a copy of the original model so people can keep their original ones. See the code for some examples.
 
+### Meta data
+
+It can be useful to extract metadata from the calculation so the following metadata properties have been added;
+
+* remarks, will return the text in the remarks section (Project Info)
+* num_scenarios, will return the number of scenarios in the file
+* num_stages(scenario_index), will return the number of stages in the given scenario (note, 0 based!)
+* stage_label(scenario_index, stage_index), will return the label of the stage
+* scenario_label(scenario_index), will return the label of the scenario
+
+### Algorithms
+
 So far the following algorithms have been added;
 
-### Algorithm berm
+#### Algorithm berm
 
 Add a berm to your DStability model. Here's an example;
 
@@ -190,7 +202,7 @@ You will now have a berm added to your original calculation
 
 
 
-### Algorithm excavation
+#### Algorithm excavation
 
 Add an excavation to the geometry. This will follow the surface. Here's some example code where we want to have an excavation at x coordinate 25m with a width of 4 meters and a depth of 1.5 meters;
 
@@ -205,7 +217,7 @@ ds.serialize("simple_geometry_excavation.stix")
 
 **Note** the image also shows the result of adding a treeload using the AlgorithmTree.
 
-### Algorithm move
+#### Algorithm move
 
 The move algorithm will simple move all points in the given x direction. So far I have not see a use case where the y location of all points needed to be changed but it is easy to implement if someone wants it really bad. The reason for creating this code is that it is handy to set the reference point of the levee at x=0.0 and if that was not the case this algorithm can be used to make that happen. Here's some sample code;
 
@@ -217,7 +229,7 @@ ds = alg.execute()
 
 Now all points have moved 10 meters in the x direction.
 
-### Algorithm phreatic line
+#### Algorithm phreatic line
 
 The algorithm for the phreatic line generates a phreatic line based on the given input parameters. 
 
@@ -248,7 +260,7 @@ Here's an image of a possible result;
 
 **Note** Yep, still working on the ditch, it's an easy fix but I wanted to have the preliminary version out
 
-### Algorithm tree
+#### Algorithm tree
 
 Add a tree (with load) at a given location. Here's some sample code;
 

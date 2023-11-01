@@ -123,7 +123,7 @@ class DStability(BaseModel):
         else:
             raise ValueError(f"Invalid scenario index {scenario_index}")
 
-    def stage_name(self, scenario_index: int, stage_index: int) -> str:
+    def stage_label(self, scenario_index: int, stage_index: int) -> str:
         if scenario_index < len(self.model.scenarios):
             if stage_index < len(self.model.scenarios[scenario_index].Stages):
                 return self.model.scenarios[scenario_index].Stages[stage_index].Label
@@ -132,7 +132,7 @@ class DStability(BaseModel):
         else:
             raise ValueError(f"Invalid scenario index {scenario_index}")
 
-    def scenario_name(self, scenario_index: int) -> str:
+    def scenario_label(self, scenario_index: int) -> str:
         if scenario_index < len(self.model.scenarios):
             return self.model.scenarios[0].Label
         raise ValueError(f"Invalid scenario index {scenario_index}")
