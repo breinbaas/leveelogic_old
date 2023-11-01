@@ -106,6 +106,37 @@ class DStability(BaseModel):
         if pl is None:
             return []
 
+    @property
+    def remarks(self) -> str:
+        if self.model.datastructure.projectinfo.Remarks is None:
+            return ""
+        else:
+            return self.model.datastructure.projectinfo.Remarks
+
+    @property
+    def num_scenarios(self) -> int:
+        return len(self.model.scenarios)
+
+    def num_stages(self, scenario_index: int) -> int:
+        if scenario_index < len(self.model.scenarios):
+            return len(self.model.scenarios[scenario_index].Stages)
+        else:
+            raise ValueError(f"Invalid scenario index {scenario_index}")
+
+    def stage_name(self, scenario_index: int, stage_index: int) -> str:
+        if scenario_index < len(self.model.scenarios):
+            if stage_index < len(self.model.scenarios[scenario_index].Stages):
+                return self.model.scenarios[scenario_index].Stages[stage_index].Label
+            else:
+                raise ValueError(f"Invalid stage index {stage_index}")
+        else:
+            raise ValueError(f"Invalid scenario index {scenario_index}")
+
+    def scenario_name(self, scenario_index: int) -> str:
+        if scenario_index < len(self.model.scenarios):
+            return self.model.scenarios[0].Label
+        raise ValueError(f"Invalid scenario index {scenario_index}")
+
     def set_phreatic_line(self, points: List[Tuple[float, float]]):
         """Set the phreatic line from the given points
 
