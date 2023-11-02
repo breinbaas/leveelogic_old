@@ -1,7 +1,6 @@
 from typing import List, Dict, Optional
 import numpy as np
-from matplotlib.pyplot import Figure
-from matplotlib.patches import Polygon
+
 from pydantic import BaseModel
 from copy import deepcopy
 
@@ -33,7 +32,9 @@ class SoilProfile1(DataModel):
 
     lat: float = 0.0
     lon: float = 0.0
-    soillayers: List[SoilLayer] = []
+    soillayers: List[
+        SoilLayer
+    ] = []  # TODO this is only valid for rectangles, should be polygons.. I think
 
     @property
     def top(self) -> float:
@@ -124,17 +125,57 @@ class SoilProfile1(DataModel):
                     break
         self.apply_minimum_height(minimum_height)  # recursive
 
-    def validate(self):
-        """Will raise an exception if an error is found in the geometry"""
-        succes = True
-        # layers top is higher than bottom and not 0
-        for sl in self.soillayers:
-            if sl.height <= 0:
-                raise SoilProfile1HeightError(
-                    f"Negvative soillayer height in layer {sl.soilcode} found"
-                )
+    # def validate(self):
+    #     """Will raise an exception if an error is found in the geometry"""
+    #     # layers top is higher than bottom and not 0
+    #     for sl in self.soillayers:
+    #         if sl.height <= 0:
+    #             raise SoilProfile1HeightError(
+    #                 f"Negvative soillayer height in layer {sl.soilcode} found"
+    #             )
 
-        # layers do not have gaps
-        for i in range(1, len(self.soillayers)):
-            if self.soillayers[i - 1].bottom != self.soillayers[i].top:
-                raise SoilProfile1GapError(f"Gap found between layers {i-1} and {i}")
+    #     # layers do not have gaps
+    #     for i in range(1, len(self.soillayers)):
+    #         if self.soillayers[i - 1].bottom != self.soillayers[i].top:
+    #             raise SoilProfile1GapError(f"Gap found between layers {i-1} and {i}")
+
+    def add_top_layer(self, top: float, soilcode: str):
+        """Add a layer on top of the current soillayers with a given top coordinate and the given soilcode
+
+        Args:
+            top (float): top of the new layer that will be placed on top of the current ones
+            soilcode (str): soilcode of the new top layer
+        """
+        if len(self.soillayers) == 0:
+            raise SoilProfile1HeightError(
+                f"Trying to add a top soillayer but the soilprofile is empty."
+            )
+        if top <= self.soillayers[0].top:
+            raise SoilProfile1HeightError(
+                f"Trying to add a top soillayer but the top is lower than or equal to the current soilprofile."
+            )
+
+        # finally.. add it!
+        self.soillayers.insert(
+            0, SoilLayer(top=top, bottom=self.soillayers[0].top, soilcode=soilcode)
+        )
+
+    def add_bottom_layer(self, bottom: float, soilcode: str):
+        """Add a layer on the bottom of the current soillayers with the given bottom coordinate and the given soilcode
+
+        Args:
+            bottom (float): the bottom of the new layer
+            soilcode (str): the soilcode of the new layer
+        """
+        if len(self.soillayers) == 0:
+            raise SoilProfile1HeightError(
+                f"Trying to add a bottom soillayer but the soilprofile is empty."
+            )
+        if bottom >= self.soillayers[-1].bottom:
+            raise SoilProfile1HeightError(
+                f"Trying to add a bottom soillayer but the bottom is higher than or equal to the current soilprofile."
+            )
+
+        self.soillayers.append(
+            SoilLayer(top=self.soillayers[-1].bottom, bottom=bottom, soilcode=soilcode)
+        )
