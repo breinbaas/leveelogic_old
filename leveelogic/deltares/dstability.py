@@ -169,11 +169,16 @@ class DStability(BaseModel):
         self.boundary = []
         self.surface = []
 
+        soilcolors = {
+            sv.SoilId: sv.Color[:1] + sv.Color[3:]  # remove the alpha part
+            for sv in self.model.datastructure.soilvisualizations.SoilVisualizations
+        }
+
         for soil in self.model.soils.Soils:
             self.soils[soil.Id] = {
                 "code": soil.Code,
                 "name": soil.Name,
-                "color": "",
+                "color": soilcolors[soil.Id],
                 "yd": soil.VolumetricWeightAbovePhreaticLevel,
                 "ys": soil.VolumetricWeightBelowPhreaticLevel,
             }

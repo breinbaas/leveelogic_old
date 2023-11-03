@@ -16,6 +16,7 @@ simplejson = "^3.19.2"
 pytest = "^7.4.3"
 shapely = "^2.0.2"
 coverage = "^7.3.2"
+anvil-uplink = "^0.4.2"
 
 
 [build-system]
