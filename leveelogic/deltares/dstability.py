@@ -104,6 +104,8 @@ class DStability(BaseModel):
         """
         pl = self.phreatic_line
         if pl is None:
+            return [(p.X, p.Z) for p in self.phreatic_line]
+        else:
             return []
 
     @property
