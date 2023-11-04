@@ -1,3 +1,5 @@
+import pytest
+
 from leveelogic.deltares.dstability import DStability
 
 
@@ -15,4 +17,5 @@ class TestDStability:
 
     def test_extract_soilparameters(self):
         ds = DStability.from_stix("tests/testdata/stix/complex_geometry.stix")
-        ds.extract_soilparameters("tests/testdata/output/soilparameters.csv")
+        lines = ds.extract_soilparameters()
+        assert len(lines) == 26

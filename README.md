@@ -171,6 +171,18 @@ It can be useful to extract metadata from the calculation so the following metad
 * stage_label(scenario_index, stage_index), will return the label of the stage
 * scenario_label(scenario_index), will return the label of the scenario
 
+
+### Soil parameters
+
+A function has been added to extract all the soil names, codes and parameters from a loaded stix. Here's some example code;
+
+```python
+ds = DStability.from_stix("complex_geometry.stix")
+lines = ds.extract_soilparameters()
+```
+
+This will return a list of strings which can exported to a csv file.
+
 ### Algorithms
 
 So far the following algorithms have been added;

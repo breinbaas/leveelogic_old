@@ -5,6 +5,9 @@ from shapely.geometry import Polygon
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 from typing import Dict, List, Tuple, Union, BinaryIO, Optional
+from dotenv import load_dotenv
+import os
+import subprocess
 from geolib.geometry.one import Point
 from geolib.models.dstability.internal import (
     PersistableHeadLine,
@@ -15,6 +18,9 @@ from leveelogic.geometry.characteristic_point import (
     CharacteristicPoint,
     CharacteristicPointType,
 )
+
+load_dotenv()
+DSTABILITY_MIGRATION_CONSOLE_PATH = os.getenv("DSTABILITY_MIGRATION_CONSOLE_PATH")
 
 
 class DStability(BaseModel):
@@ -29,7 +35,7 @@ class DStability(BaseModel):
     surface: List[Tuple[float, float]] = []
 
     @classmethod
-    def from_stix(cls, stix_file: str) -> "DStability":
+    def from_stix(cls, stix_file: str, auto_upgrade=True) -> "DStability":
         """Generate a DStability object from a stix file
 
         Args:
@@ -39,7 +45,20 @@ class DStability(BaseModel):
             DStability: A DStability object
         """
         result = DStability()
-        result.model.parse(Path(stix_file))
+        try:
+            result.model.parse(Path(stix_file))
+        except ValueError as e:
+            if str(e) == "Can't listdir a file" and auto_upgrade:
+                try:
+                    subprocess.run(
+                        [DSTABILITY_MIGRATION_CONSOLE_PATH, stix_file, stix_file]
+                    )
+                    result.model.parse(Path(stix_file))
+                except Exception as e:
+                    raise e
+            else:
+                raise e
+
         result.set_scenario_and_stage(0, 0)
         return result
 
@@ -400,7 +419,7 @@ class DStability(BaseModel):
         """
         self.model.serialize(location)
 
-    def extract_soilparameters(self, filepath: str) -> List[str]:
+    def extract_soilparameters(self) -> List[str]:
         result = [
             "name,code,model,yd,ys,probabilistic,cohesion,friction angle,dilatancy,S,m\n"
         ]
