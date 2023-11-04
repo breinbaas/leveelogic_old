@@ -6,7 +6,10 @@ from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 from typing import Dict, List, Tuple, Union, BinaryIO, Optional
 from geolib.geometry.one import Point
-from geolib.models.dstability.internal import PersistableHeadLine
+from geolib.models.dstability.internal import (
+    PersistableHeadLine,
+    ShearStrengthModelTypePhreaticLevelInternal,
+)
 
 from leveelogic.geometry.characteristic_point import (
     CharacteristicPoint,
@@ -103,8 +106,8 @@ class DStability(BaseModel):
             List[Tuple[float, float]]: The points of the phreatic line (x,z)
         """
         pl = self.phreatic_line
-        if pl is None:
-            return [(p.X, p.Z) for p in self.phreatic_line]
+        if pl is not None:
+            return [(p.X, p.Z) for p in self.phreatic_line.Points]
         else:
             return []
 
@@ -396,3 +399,64 @@ class DStability(BaseModel):
             location (Union[FilePath, DirectoryPath, BinaryIO]): The path to save to
         """
         self.model.serialize(location)
+
+    def extract_soilparameters(self, filepath: str) -> List[str]:
+        result = [
+            "name,code,model,yd,ys,probabilistic,cohesion,friction angle,dilatancy,S,m\n"
+        ]
+        for soil in self.model.soils.Soils:
+            d = {
+                "name": soil.Name,
+                "code": soil.Code,
+                "model": "",
+                "yd": f"{soil.VolumetricWeightAbovePhreaticLevel:.2f}",
+                "ys": f"{soil.VolumetricWeightBelowPhreaticLevel:.2f}",
+                "prob": "",
+                "c": "",
+                "phi": "",
+                "dilatancy": "",
+                "S": "",
+                "m": "",
+            }
+
+            if soil.IsProbabilistic:
+                d["prob"] = "true"
+            else:
+                ssma = soil.ShearStrengthModelTypeAbovePhreaticLevel
+                ssmb = soil.ShearStrengthModelTypeBelowPhreaticLevel
+
+                if (
+                    ssma
+                    == ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_ADVANCED
+                ):
+                    d["model"] = "MOHR_COULOMB_ADVANCED"
+                    d[
+                        "c"
+                    ] = f"{soil.MohrCoulombAdvancedShearStrengthModel.Cohesion:.2f}"
+                    d[
+                        "phi"
+                    ] = f"{soil.MohrCoulombAdvancedShearStrengthModel.FrictionAngle:.2f}"
+                    d[
+                        "dilatancy"
+                    ] = f"{soil.MohrCoulombAdvancedShearStrengthModel.Dilatancy:.2f}"
+                elif (
+                    ssma
+                    == ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_CLASSIC
+                ):
+                    d["model"] = "MOHR_COULOMB_CLASSIC"
+                    d["c"] = f"{soil.MohrCoulombClassicShearStrengthModel.Cohesion:.2f}"
+                    d[
+                        "phi"
+                    ] = f"{soil.MohrCoulombClassicShearStrengthModel.FrictionAngle:.2f}"
+                elif ssma == ShearStrengthModelTypePhreaticLevelInternal.NONE:
+                    d["model"] = "NONE"
+                elif ssma == ShearStrengthModelTypePhreaticLevelInternal.SU:
+                    d["model"] = "SU"
+                    d["S"] = f"{soil.SuShearStrengthModel.ShearStrengthRatio:.2f}"
+                    d["m"] = f"{soil.SuShearStrengthModel.StrengthIncreaseExponent:.2f}"
+                elif ssma == ShearStrengthModelTypePhreaticLevelInternal.SUTABLE:
+                    d["model"] = "SUTABLE"
+            result.append(
+                f"{d['name']},{d['code']},{d['model']},{d['yd']},{d['ys']},{d['prob']},{d['c']},{d['phi']},{d['dilatancy']},{d['S']},{d['m']}\n"
+            )
+        return result
