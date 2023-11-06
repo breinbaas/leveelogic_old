@@ -17,3 +17,4 @@ class TestAlgorithmMove:
             ds.get_characteristic_point(point_type=CharacteristicPointType.TOE_RIGHT).x
             == 35
         )
+        ds.serialize("tests/testdata/output/moved.stix")

@@ -45,6 +45,9 @@ class AlgorithmMove(Algorithm):
             for hl in waternet.HeadLines:
                 for point in hl.Points:
                     point.X += self.dx
+            for rl in waternet.ReferenceLines:
+                for point in rl.Points:
+                    point.X += self.dx
 
         for cs in ds.model.datastructure.calculationsettings:
             if cs.Bishop is not None:
@@ -90,6 +93,8 @@ class AlgorithmMove(Algorithm):
             for sl in state.StateLines:
                 for point in sl.Points:
                     point.X += self.dx
+                for value in sl.Values:
+                    value.X += self.dx
             for point in state.StatePoints:
                 point.Point.X += self.dx
 
