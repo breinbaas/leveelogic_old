@@ -357,7 +357,8 @@ def line_polyline_intersections(
 
 
 def polyline_polyline_intersections(
-    points_line1: List[Tuple[float, float]], points_line2: List[Tuple[float, float]]
+    points_line1: List[Tuple[float, float]],
+    points_line2: List[Tuple[float, float]],
 ):
     result = []
     ls1 = LineString(points_line1)

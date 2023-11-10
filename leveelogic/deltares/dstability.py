@@ -12,6 +12,9 @@ from geolib.geometry.one import Point
 from geolib.models.dstability.internal import (
     PersistableHeadLine,
     ShearStrengthModelTypePhreaticLevelInternal,
+    UpliftVanParticleSwarmResult,
+    BishopBruteForceResult,
+    SpencerGeneticAlgorithmResult,
 )
 
 from leveelogic.geometry.characteristic_point import (
@@ -390,9 +393,7 @@ class DStability(BaseModel):
                     if p1.X == p2.X:
                         zs.append(p1.Z)
                     else:
-                        zs.append(
-                            round(p1.Z + (x - p1.X) / (p2.X - p1.X) * (p2.Z - p1.Z), 3)
-                        )
+                        zs.append(p1.Z + (x - p1.X) / (p2.X - p1.X) * (p2.Z - p1.Z))
 
         for r in zs:
             if not r in result:
@@ -479,3 +480,44 @@ class DStability(BaseModel):
                 f"{d['name']},{d['code']},{d['model']},{d['yd']},{d['ys']},{d['prob']},{d['c']},{d['phi']},{d['dilatancy']},{d['S']},{d['m']}\n"
             )
         return result
+
+    def safety_factor_to_dict(self, scenario_index: int = 0, stage_index: int = 0):
+        try:
+            sf = self.model.get_result(scenario_index, stage_index)
+        except Exception as e:
+            return {}
+
+        if type(sf) == UpliftVanParticleSwarmResult:
+            return {
+                "model": "upliftvan_particle_swarm",
+                "fos": sf.FactorOfSafety,
+                "left_circle": {
+                    "x": sf.LeftCenter.X,
+                    "z": sf.LeftCenter.Z,
+                },
+                "right_circle": {
+                    "x": sf.RightCenter.X,
+                    "z": sf.RightCenter.Z,
+                },
+                "tangent": sf.TangentLine,
+            }
+        elif type(sf) == BishopBruteForceResult:
+            return {
+                "model": "bishop_brute_force",
+                "fos": sf.FactorOfSafety,
+                "circle": {
+                    "x": sf.Circle.Center.X,
+                    "z": sf.Circle.Center.Z,
+                    "r": sf.Circle.Radius,
+                },
+            }
+        elif type(sf) == SpencerGeneticAlgorithmResult:
+            return {
+                "model": "spencer_genetic_algorithm",
+                "fos": sf.FactorOfSafety,
+                "slip_plane": [{"x": p.X, "z": p.Z} for p in sf.SlipPlane],
+            }
+        else:
+            raise ValueError(
+                f"Cannot convert the result of type '{type(sf) }' yet, for now limited to spencer genetic, bishop brute force, uplift particlr swarm"
+            )

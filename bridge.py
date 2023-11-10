@@ -10,7 +10,7 @@ from leveelogic.deltares.dstability import DStability
 
 load_dotenv()
 ANVIL_KEY = os.getenv("ANVIL_KEY")
-ANVIL_TEMP_FILES_PATH = os.getenv("ANVIL_TEMP_FILES_PATH")
+TEMP_FILES_PATH = os.getenv("TEMP_FILES_PATH")
 DSTABILITY_PATH = os.getenv("DSTABILITY_PATH")
 DSTABILITY_MIGRATION_CONSOLE_PATH = os.getenv("DSTABILITY_MIGRATION_CONSOLE_PATH")
 
@@ -24,7 +24,7 @@ def update_stix(stix_file):
 @anvil.server.callable
 def LL_parse_stix(stix_file):
     # write to temporary file
-    fname = Path(ANVIL_TEMP_FILES_PATH) / f"{uuid.uuid4()}.stix"
+    fname = Path(TEMP_FILES_PATH) / f"{uuid.uuid4()}.stix"
     with open(fname, "wb") as f:
         f.write(stix_file.get_bytes())
 
@@ -40,6 +40,7 @@ def LL_parse_stix(stix_file):
     result = {
         "soillayers": ds.soillayers,
         "plline": ds.phreatic_line_points,
+        "result": ds.safety_factor_to_dict(),
     }
 
     # remove the file

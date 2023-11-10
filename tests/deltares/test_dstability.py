@@ -19,3 +19,8 @@ class TestDStability:
         ds = DStability.from_stix("tests/testdata/stix/complex_geometry.stix")
         lines = ds.extract_soilparameters()
         assert len(lines) == 26
+
+    def test_safety_factor_to_dict(self):
+        ds = DStability.from_stix("tests/testdata/stix/complex_geometry.stix")
+        d = ds.safety_factor_to_dict(1, 0)
+        i = 1
