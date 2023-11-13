@@ -11,6 +11,11 @@ from .algorithm import Algorithm
 from ...helpers import polyline_polyline_intersections
 from ...geometry.characteristic_point import CharacteristicPointType
 
+# DEBUG
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.patches import Polygon
+
 load_dotenv()
 
 MAX_ITERATIONS = 10
@@ -69,19 +74,45 @@ class AlgorithmBermFromZ(Algorithm):
             ]
             p9 = (intersections[0], self.ds.z_at(intersections[0])[0])
 
+            # TODO tussen p9 en p5 en p5 en p7 kunnen snijpunten zitten, dit worden dan aparte lagen
+            # geeft nu foutmelding (multipolygon)
+
             new_layer_points = [Point(x=p[0], z=p[1]) for p in [p9, p5, p7]]
+
+            # debug plot
+            fig = Figure(figsize=(20, 10))
+            ax = fig.add_subplot()
+            for sl in ds.soillayers:
+                pg = Polygon(
+                    sl["points"],
+                    facecolor="none",
+                    edgecolor="black",
+                    lw=0.7,
+                )
+                ax.add_patch(pg)
+            points = [p1, p2, p3, p4, p5, p6, p7, p8, p9]
+            ax.scatter([p[0] for p in points], [p[1] for p in points])
+            ax.plot([p9[0], p5[0], p7[0]], [p9[1], p5[1], p7[1]], "k--")
+
+            ax.set_xlim(p9[0] - 5.0, p7[0] + 5.0)
+            ax.set_ylim(ds.bottom, ds.top)
+
+            fig.savefig("tests/testdata/output/berm_debug_plot.png")
 
             new_layer_points += [
                 Point(x=p[0], z=p[1])
                 for p in self.ds.surface_points_between(p9[0], p7[0])[::-1]
             ]
-            new_layer_points.append(Point(x=p1[0], z=p1[1]))
             ds.model.add_layer(new_layer_points, self.soilcode)
-            ds.serialize(Path(temp_files_path) / f"berm_{h}.stix")
+            fname = Path(temp_files_path) / f"berm_{h}.stix"
+            ds.serialize(fname)
 
             try:
                 ds.model.execute()
                 sf = ds.model.get_result(0, 0).FactorOfSafety
+                # remove file
+                # file_path = Path(fname)
+                # file_path.unlink()
             except:
                 raise ValueError(
                     "Could not find a valid solution with these parameters."
