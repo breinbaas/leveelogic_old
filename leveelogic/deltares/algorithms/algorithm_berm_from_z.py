@@ -30,6 +30,7 @@ class AlgorithmBermFromZ(Algorithm):
     slope_top: float
     slope_side: float
     step_size: float = 0.25
+    save_files: bool = False
 
     def _check_input(self):
         # do we have this soilcode
@@ -110,9 +111,11 @@ class AlgorithmBermFromZ(Algorithm):
             try:
                 ds.model.execute()
                 sf = ds.model.get_result(0, 0).FactorOfSafety
-                # remove file
-                # file_path = Path(fname)
-                # file_path.unlink()
+
+                # might be useful for debugging or other purposes
+                if not self.save_files:
+                    file_path = Path(fname)
+                    file_path.unlink()
             except:
                 raise ValueError(
                     "Could not find a valid solution with these parameters."
@@ -129,5 +132,3 @@ class AlgorithmBermFromZ(Algorithm):
                 )
             else:
                 iter += 1
-
-        

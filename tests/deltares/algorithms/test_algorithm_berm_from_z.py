@@ -35,3 +35,20 @@ class TestAlgorithmBermFromZ:
         )
         ds = alg.execute()
         ds.serialize("tests/testdata/output/simple_geometry_berm_from_z.stix")
+
+    def test_execute_spikey_geometry(self):
+        ds = DStability.from_stix("tests/testdata/stix/spikey_geometry.stix")
+        alg = AlgorithmBermFromZ(
+            ds=ds,
+            soilcode="H_Rk_ko",
+            required_sf=0.8,
+            x_base=37,
+            angle=20,
+            initial_height=4.0,
+            slope_top=10,
+            slope_side=2,
+            step_size=1.0,
+            save_files=True,
+        )
+        ds = alg.execute()
+        ds.serialize("tests/testdata/output/simple_geometry_berm_from_z.stix")
