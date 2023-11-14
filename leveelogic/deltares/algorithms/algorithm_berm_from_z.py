@@ -129,3 +129,5 @@ class AlgorithmBermFromZ(Algorithm):
                 )
             else:
                 iter += 1
+
+        
