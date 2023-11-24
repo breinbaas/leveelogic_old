@@ -24,3 +24,14 @@ class TestDStability:
         ds = DStability.from_stix("tests/testdata/stix/complex_geometry.stix")
         d = ds.safety_factor_to_dict(1, 0)
         i = 1
+
+    def test_surface_intersections(self):
+        ds = DStability.from_stix("tests/testdata/stix/simple_geometry.stix")
+        intersections = ds.surface_intersections([(ds.left, 3.0), (ds.right, 3.0)])
+        assert len(intersections) == 2
+        assert intersections[0] == (8.0, 3.0)
+
+    def test_get_headlines_coordinates(self):
+        ds = DStability.from_stix("tests/testdata/stix/fc_pl_sample.stix")
+        hl_points = ds.get_headline_coordinates("Stijghoogtelijn 3 (PL3)")
+        assert len(hl_points) == 26

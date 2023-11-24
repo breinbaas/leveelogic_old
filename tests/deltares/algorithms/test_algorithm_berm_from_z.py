@@ -52,3 +52,20 @@ class TestAlgorithmBermFromZ:
         )
         ds = alg.execute()
         ds.serialize("tests/testdata/output/simple_geometry_berm_from_z.stix")
+
+    def test_execute_fc_pl_sample(self):
+        ds = DStability.from_stix("tests/testdata/stix/fc_pl_sample.stix")
+        alg = AlgorithmBermFromZ(
+            ds=ds,
+            soilcode="Dijksmateriaal (klei)_K3_Su",
+            required_sf=1.0,
+            x_base=268,
+            angle=20,
+            initial_height=1.0,
+            slope_top=10,
+            slope_side=2,
+            step_size=0.5,
+            save_files=True,
+        )
+        ds = alg.execute()
+        ds.serialize("tests/testdata/output/fc_pl_sample_berm_from_z.stix")

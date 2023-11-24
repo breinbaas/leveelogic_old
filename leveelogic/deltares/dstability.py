@@ -1,7 +1,7 @@
 from pydantic import BaseModel, DirectoryPath, FilePath
 import geolib as gl
 from pathlib import Path
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, LineString
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 from typing import Dict, List, Tuple, Union, BinaryIO, Optional
@@ -11,6 +11,7 @@ import subprocess
 from geolib.geometry.one import Point
 from geolib.models.dstability.internal import (
     PersistableHeadLine,
+    PersistablePoint,
     ShearStrengthModelTypePhreaticLevelInternal,
     UpliftVanParticleSwarmResult,
     BishopBruteForceResult,
@@ -21,6 +22,7 @@ from leveelogic.geometry.characteristic_point import (
     CharacteristicPoint,
     CharacteristicPointType,
 )
+from ..helpers import polyline_polyline_intersections
 
 load_dotenv()
 DSTABILITY_MIGRATION_CONSOLE_PATH = os.getenv("DSTABILITY_MIGRATION_CONSOLE_PATH")
@@ -132,6 +134,40 @@ class DStability(BaseModel):
             return [(p.X, p.Z) for p in self.phreatic_line.Points]
         else:
             return []
+
+    def get_headline_coordinates(self, label: str) -> List[Tuple[float, float]]:
+        """Get the coordinates of the given headline
+
+        Args:
+            label (str): The label of the headline
+
+        Returns:
+            List[Tuple[float, float]]: List of points of the given headline
+        """
+        for hl in self.model.waternets[0].HeadLines:
+            if hl.Label == label:
+                return [(p.X, p.Z) for p in hl.Points]
+
+        raise ValueError(f"Invalid headline label '{label}' (not found)")
+
+    def set_headline_coordinates(self, label: str, coords: List[Tuple[float, float]]):
+        """Overwrite the current coordinates (from left to right) of a headline with the given coordinates
+
+        Args:
+            label (str): Label of the headline
+            coords (List[Tuple[float, float]]): New coordinates
+        """
+        for hl in self.model.waternets[0].HeadLines:
+            if hl.Label == label:
+                if len(coords) > len(hl.Points):
+                    raise ValueError(
+                        f"Trying to set more coords ({len(coords)}) then currently in headline '{label}' ({len(hl.Points)})"
+                    )
+                for i in range(len(coords)):
+                    hl.Points[i] = PersistablePoint(X=coords[i][0], Z=coords[i][1])
+                return
+
+        raise ValueError(f"Invalid headline label '{label}' (not found)")
 
     @property
     def remarks(self) -> str:
@@ -329,6 +365,11 @@ class DStability(BaseModel):
                 result = None
 
         return result
+
+    def surface_intersections(
+        self, polyline: List[Tuple[float, float]]
+    ) -> List[Tuple[float, float]]:
+        return polyline_polyline_intersections(polyline, self.surface)
 
     def surface_points_between(
         self, left: float, right: float

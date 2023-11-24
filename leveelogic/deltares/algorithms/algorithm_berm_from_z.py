@@ -62,49 +62,71 @@ class AlgorithmBermFromZ(Algorithm):
                 p1[1] + math.sin(math.radians(self.angle)) * (self.ds.right - p1[0]),
             )
             p4 = (self.ds.right, p2[1] - (self.ds.right - p2[0]) / self.slope_top)
+
+            # this can only lead to one intersection unless slope top == angle
             p5 = polyline_polyline_intersections([p2, p4], [p1, p3])[0]
+
+            # we need the last intersection with the surface for our berm line
             p6 = (self.ds.right, p5[1] - (self.ds.right - p5[0]) / self.slope_side)
             intersections = polyline_polyline_intersections(self.ds.surface, [p5, p6])[
-                0
+                -1
             ]
             p7 = (intersections[0], self.ds.z_at(intersections[0])[0])
-            p8 = (self.ds.left, p2[1] + (p2[0] - self.ds.left) / self.slope_top)
 
+            p8 = (self.ds.left, p2[1] + (p2[0] - self.ds.left) / self.slope_top)
+            # we need the first point left of p2 on our surface to complete our berm line
             intersections = polyline_polyline_intersections(self.ds.surface, [p2, p8])[
                 -1
             ]
             p9 = (intersections[0], self.ds.z_at(intersections[0])[0])
 
-            # TODO tussen p9 en p5 en p5 en p7 kunnen snijpunten zitten, dit worden dan aparte lagen
-            # geeft nu foutmelding (multipolygon)
+            # now we have the berm but this line can intersect multiple parts of the geometry (in case of for example the spikey geometry)
+            # get all the intersections of the surface with the berm line
+            # we add p9 as the first point
+            berm_intersections = [p9] + polyline_polyline_intersections(
+                [p9, p5, p6], self.ds.surface
+            )
 
-            new_layer_points = [Point(x=p[0], z=p[1]) for p in [p9, p5, p7]]
+            for i in range(0, len(berm_intersections), 2):
+                tp1 = list(berm_intersections[i])
+                tp2 = list(berm_intersections[i + 1])
+                tp1[1] = ds.z_at(tp1[0])[0]
+                tp2[1] = ds.z_at(tp2[0])[0]
+
+                new_points = [tp1]
+                if tp1[0] < p5[0] and p5[0] < tp2[0]:
+                    new_points.append(p5)
+                new_points.append(tp2)
+                new_points += self.ds.surface_points_between(tp1[0], tp2[0])[::-1]
+
+                new_layer_points = [Point(x=p[0], z=p[1]) for p in new_points]
+                ds.model.add_layer(new_layer_points, self.soilcode)
 
             # debug plot
-            fig = Figure(figsize=(20, 10))
-            ax = fig.add_subplot()
-            for sl in ds.soillayers:
-                pg = Polygon(
-                    sl["points"],
-                    facecolor="none",
-                    edgecolor="black",
-                    lw=0.7,
-                )
-                ax.add_patch(pg)
-            points = [p1, p2, p3, p4, p5, p6, p7, p8, p9]
-            ax.scatter([p[0] for p in points], [p[1] for p in points])
-            ax.plot([p9[0], p5[0], p7[0]], [p9[1], p5[1], p7[1]], "k--")
+            # fig = Figure(figsize=(20, 10))
+            # ax = fig.add_subplot()
+            # for sl in ds.soillayers:
+            #     pg = Polygon(
+            #         sl["points"],
+            #         facecolor="none",
+            #         edgecolor="black",
+            #         lw=0.7,
+            #     )
+            #     ax.add_patch(pg)
+            # points = [p1, p2, p3, p4, p5, p6, p7, p8, p9]
+            # ax.scatter([p[0] for p in points], [p[1] for p in points])
+            # ax.plot([p9[0], p5[0], p7[0]], [p9[1], p5[1], p7[1]], "k--")
 
-            ax.set_xlim(p9[0] - 5.0, p7[0] + 5.0)
-            ax.set_ylim(ds.bottom, ds.top)
+            # ax.set_xlim(p9[0] - 5.0, p7[0] + 5.0)
+            # ax.set_ylim(ds.bottom, ds.top)
 
-            fig.savefig("tests/testdata/output/berm_debug_plot.png")
+            # fig.savefig("tests/testdata/output/berm_debug_plot.png")
 
-            new_layer_points += [
-                Point(x=p[0], z=p[1])
-                for p in self.ds.surface_points_between(p9[0], p7[0])[::-1]
-            ]
-            ds.model.add_layer(new_layer_points, self.soilcode)
+            # new_layer_points += [
+            #     Point(x=p[0], z=p[1])
+            #     for p in self.ds.surface_points_between(p9[0], p7[0])[::-1]
+            # ]
+
             fname = Path(temp_files_path) / f"berm_{h}.stix"
             ds.serialize(fname)
 
