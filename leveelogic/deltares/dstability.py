@@ -29,6 +29,7 @@ DSTABILITY_MIGRATION_CONSOLE_PATH = os.getenv("DSTABILITY_MIGRATION_CONSOLE_PATH
 
 
 class DStability(BaseModel):
+    name: str = ""
     characteristic_points: List[CharacteristicPoint] = []
     model: gl.DStabilityModel = gl.DStabilityModel()
     current_scenario_index: int = 0
@@ -50,6 +51,7 @@ class DStability(BaseModel):
             DStability: A DStability object
         """
         result = DStability()
+        result.name = Path(stix_file).stem
         try:
             result.model.parse(Path(stix_file))
         except ValueError as e:

@@ -5,11 +5,13 @@ from dotenv import load_dotenv
 import os
 from pathlib import Path
 import math
+import numpy as np
 
 from ..dstability import DStability
 from .algorithm import Algorithm
 from ...helpers import polyline_polyline_intersections
 from ...geometry.characteristic_point import CharacteristicPointType
+from ..runner import Runner
 
 # DEBUG
 import matplotlib.pyplot as plt
@@ -18,7 +20,7 @@ from matplotlib.patches import Polygon
 
 load_dotenv()
 
-MAX_ITERATIONS = 10
+MAX_ITERATIONS = 100
 
 
 class AlgorithmBermFromZ(Algorithm):
@@ -47,12 +49,19 @@ class AlgorithmBermFromZ(Algorithm):
 
     def _execute(self) -> DStability:
         temp_files_path = os.getenv("TEMP_FILES_PATH")
+        runner = Runner()
 
         sf = 0.0
         iter = 0.0
         h = self.initial_height
 
-        while sf < self.required_sf:
+        # we make 6 calculations to run parallel
+        for h in np.arange(
+            self.initial_height,
+            self.initial_height + 6.1 * self.step_size,
+            self.step_size,
+        ):
+            # while sf < self.required_sf:
             ds = deepcopy(self.ds)
 
             p1 = (self.x_base, self.ds.z_at(self.x_base)[0])
@@ -127,24 +136,26 @@ class AlgorithmBermFromZ(Algorithm):
             #     for p in self.ds.surface_points_between(p9[0], p7[0])[::-1]
             # ]
 
-            fname = Path(temp_files_path) / f"berm_{h}.stix"
+            fname = Path(temp_files_path) / f"berm_{h:.2f}.stix"
             ds.serialize(fname)
 
-            try:
-                ds.model.execute()
-                sf = ds.model.get_result(0, 0).FactorOfSafety
+            runner.models.append(ds)
 
-                # might be useful for debugging or other purposes
-                if not self.save_files:
-                    file_path = Path(fname)
-                    file_path.unlink()
-            except:
-                raise ValueError(
-                    "Could not find a valid solution with these parameters."
-                )
+            # try:
+            #     ds.model.execute()
+            #     sf = ds.model.get_result(0, 0).FactorOfSafety
 
-            if sf > self.required_sf:
-                return ds
+            #     # might be useful for debugging or other purposes
+            #     if not self.save_files:
+            #         file_path = Path(fname)
+            #         file_path.unlink()
+            # except:
+            #     raise ValueError(
+            #         "Could not find a valid solution with these parameters."
+            #     )
+
+            # if sf > self.required_sf:
+            #     return ds
 
             h += self.step_size
 
@@ -154,3 +165,6 @@ class AlgorithmBermFromZ(Algorithm):
                 )
             else:
                 iter += 1
+
+        runner.execute()
+        i = 1

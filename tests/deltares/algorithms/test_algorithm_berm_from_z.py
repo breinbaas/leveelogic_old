@@ -64,7 +64,7 @@ class TestAlgorithmBermFromZ:
             initial_height=1.0,
             slope_top=10,
             slope_side=2,
-            step_size=0.5,
+            step_size=0.2,
             save_files=True,
         )
         ds = alg.execute()
