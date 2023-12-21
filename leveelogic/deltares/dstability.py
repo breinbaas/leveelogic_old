@@ -16,6 +16,7 @@ from geolib.models.dstability.internal import (
     UpliftVanParticleSwarmResult,
     BishopBruteForceResult,
     SpencerGeneticAlgorithmResult,
+    AnalysisTypeEnum,
 )
 
 from leveelogic.geometry.characteristic_point import (
@@ -529,6 +530,12 @@ class DStability(BaseModel):
                 f"{d['name']},{d['code']},{d['model']},{d['yd']},{d['ys']},{d['prob']},{d['c']},{d['phi']},{d['dilatancy']},{d['S']},{d['m']}\n"
             )
         return result
+
+    def get_analysis_type(
+        self, scenario_index: int = 0, stage_index: int = 0
+    ) -> AnalysisTypeEnum:
+        cs = self.model._get_calculation_settings(scenario_index, stage_index)
+        return cs.AnalysisType
 
     def safety_factor_to_dict(self, scenario_index: int = 0, stage_index: int = 0):
         try:

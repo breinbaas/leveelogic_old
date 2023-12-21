@@ -1,4 +1,22 @@
 from statistics import NormalDist
+from geolib.models.dstability.internal import AnalysisTypeEnum
+
+
+def get_model_factor(analysis_type: AnalysisTypeEnum) -> float:
+    """Based on sh-macrostabiliteit-v4-28-mei-2021.pdf table 2-4"""
+    if analysis_type in [AnalysisTypeEnum.BISHOP, AnalysisTypeEnum.BISHOP_BRUTE_FORCE]:
+        return 1.11
+    elif analysis_type in [AnalysisTypeEnum.SPENCER, AnalysisTypeEnum.SPENCER_GENETIC]:
+        return 1.07
+    elif analysis_type in [
+        AnalysisTypeEnum.UPLIFT_VAN,
+        AnalysisTypeEnum.UPLIFT_VAN_PARTICLE_SWARM,
+    ]:
+        return 1.06
+    else:
+        raise ValueError(
+            f"Cannot determine model factor, unknown analysistype '{analysis_type}'."
+        )
 
 
 def sf_to_beta(sf: float, model_factor: float):

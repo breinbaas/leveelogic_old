@@ -1,6 +1,8 @@
 import pytest
 
 from leveelogic.calculations.functions import *
+from geolib.models.dstability.internal import AnalysisTypeEnum
+import pytest
 
 
 class TestFunctions:
@@ -13,3 +15,13 @@ class TestFunctions:
 
     def test_pf_to_beta(self):
         assert pf_to_beta(7.71e-7) == pytest.approx(4.806, 0.001)
+
+    def test_get_model_factor(self):
+        assert get_model_factor(AnalysisTypeEnum.BISHOP) == 1.11
+        assert get_model_factor(AnalysisTypeEnum.BISHOP_BRUTE_FORCE) == 1.11
+        assert get_model_factor(AnalysisTypeEnum.SPENCER) == 1.07
+        assert get_model_factor(AnalysisTypeEnum.SPENCER_GENETIC) == 1.07
+        assert get_model_factor(AnalysisTypeEnum.UPLIFT_VAN) == 1.06
+        assert get_model_factor(AnalysisTypeEnum.UPLIFT_VAN_PARTICLE_SWARM) == 1.06
+        with pytest.raises(ValueError):
+            get_model_factor(-1) == 1.12
