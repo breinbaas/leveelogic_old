@@ -319,6 +319,13 @@ ds.serialize("simple_geometry_tree_load.stix")
 
 You can see a result of this algorithm in the image from the Algorithm excavation.
 
+#### Algorithm fc phreatic line wsbd
+
+This algorithm is written for the waterboard Brabantse Delta to enable the creation of 
+fragility curves based on a varying river level. 
+
+TODO > uitbreiden beschrijving!
+
 ## Credits
 
 Credits go to;

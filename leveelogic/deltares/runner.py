@@ -12,23 +12,35 @@ load_dotenv()
 TEMP_FILES_PATH = os.getenv("TEMP_FILES_PATH")
 
 
+class RunnerResult(BaseModel):
+    model: DStability
+    # errors: List[str] = []
+    fos: float
+
+
 class Runner(BaseModel):
     models: List[DStability] = []
-    errors: List[str] = []
-    result: List[Dict] = []
 
     def execute(self):
-        self.result = []
-        self.errors = []
+        result = []
 
         # create runner
-        bm = gl.BaseModelList(models=[m.model for m in self.models])
-        newbm = bm.execute(Path(TEMP_FILES_PATH), nprocesses=len(self.models))
+        bml = gl.BaseModelList(models=[])
+        meta = []
+        for i in range(len(self.models)):
+            bml.models.append(self.models[i].model)
+            meta.append(self.models[i].name)
+
+        newbm = bml.execute(Path(TEMP_FILES_PATH), nprocesses=len(self.models))
 
         # save output
-        self.models = []
-        for model in newbm.models:
+        for i, model in enumerate(newbm.models):
             dm = DStability(model=model)
             dm._post_process()
-            self.models.append(dm)
-            self.result.append(dm.safety_factor_to_dict())
+            dm.name = meta[i]
+            fos_dict = dm.safety_factor_to_dict()
+
+            if fos_dict != {}:
+                result.append(RunnerResult(model=dm, fos=fos_dict["fos"]))
+
+        return result

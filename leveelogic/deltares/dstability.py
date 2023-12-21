@@ -137,6 +137,12 @@ class DStability(BaseModel):
         else:
             return []
 
+    def get_headline_by_label(self, label: str = "") -> PersistableHeadLine:
+        for hl in self.model.waternets[0].HeadLines:
+            if hl.Label == label:
+                return hl
+        raise ValueError(f"No headline with label '{label}' in this model.")
+
     def get_headline_coordinates(self, label: str) -> List[Tuple[float, float]]:
         """Get the coordinates of the given headline
 
