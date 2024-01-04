@@ -3,6 +3,7 @@ from urllib.request import urlopen
 import requests
 import xmltodict
 import random
+from typing import List
 
 from .bro_objects import CPTCharacteristics, Envelope, Point
 from ..soilinvestigation.cpt import Cpt, CptReadError
@@ -16,6 +17,7 @@ class BROAPI(BaseModel):
         top: float,
         right: float,
         bottom: float,
+        exclude_bro_ids: List[str] = [],
         max_num: int = -1,
     ):
         envelope = Envelope(
@@ -62,12 +64,13 @@ class BROAPI(BaseModel):
                 # TODO: Add this information to logger
                 if "CPT_C" not in document.keys():
                     continue
-                available_cpt_objects.append(CPTCharacteristics(document["CPT_C"]))
 
-                if max_num != -1 and len(available_cpt_objects) > max_num:
-                    available_cpt_objects = random.choices(
-                        available_cpt_objects, k=max_num
-                    )
+                bro_id = f"BRO_{document['CPT_C']['brocom:broId']}"
+                if not bro_id in exclude_bro_ids:
+                    available_cpt_objects.append(CPTCharacteristics(document["CPT_C"]))
+
+            if max_num != -1 and len(available_cpt_objects) > max_num:
+                available_cpt_objects = random.choices(available_cpt_objects, k=max_num)
 
             return available_cpt_objects
 
@@ -77,7 +80,10 @@ class BROAPI(BaseModel):
         URL = f"{BRO_CPT_DOWNLOAD_URL}/{bro_id}"
         try:
             s = urlopen(URL).read()
-            return Cpt.from_string(s, suffix=".xml")
+            cpt = Cpt.from_string(s, suffix=".xml")
+            # add BRO_ as a prefix
+            cpt.name = f"BRO_{cpt.name}"
+            return s, cpt
         except Exception as e:
             raise CptReadError(
                 f"Error reading cpt file from url '{URL}', got error '{e}' "
@@ -89,12 +95,22 @@ class BROAPI(BaseModel):
         right: float,
         top: float,
         bottom: float,
+        exclude_bro_ids: List[str] = [],
         max_num: int = -1,
     ):
         cpt_characteristics = self._get_cpt_metadata_by_bounds(
-            left=left, top=top, right=right, bottom=bottom, max_num=1
+            left=left,
+            top=top,
+            right=right,
+            bottom=bottom,
+            exclude_bro_ids=exclude_bro_ids,
+            max_num=1,
         )
 
-        cpts = [self._get_cpt_from_bro_id(cc.bro_id) for cc in cpt_characteristics]
+        cpt_strings, cpts = [], []
+        for cpt_c in cpt_characteristics:
+            cpt_string, cpt = self._get_cpt_from_bro_id(cpt_c.bro_id)
+            cpt_strings.append(cpt_string)
+            cpts.append(cpt)
 
-        return cpts
+        return cpt_strings, cpts
