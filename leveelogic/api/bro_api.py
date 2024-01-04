@@ -104,7 +104,7 @@ class BROAPI(BaseModel):
             right=right,
             bottom=bottom,
             exclude_bro_ids=exclude_bro_ids,
-            max_num=1,
+            max_num=max_num,
         )
 
         cpt_strings, cpts = [], []
