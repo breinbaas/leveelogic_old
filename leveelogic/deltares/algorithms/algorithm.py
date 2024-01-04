@@ -5,8 +5,10 @@ from ..dstability import DStability
 
 
 class AlgorithmExecutionError(Exception):
-    """This exception is raised if an error occured during execution"""
+    pass
 
+
+class AlgorithmInputCheckError(Exception):
     pass
 
 

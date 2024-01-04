@@ -13,4 +13,4 @@ class TestAlgorithmFCPhreaticLineWSBD:
         for i, ds in enumerate(result):
             ds.serialize(f"tests/testdata/output/fc_phreatic_line_wsbd_{i}.stix")
 
-        # TODO add test result
+        assert len(result) == 7

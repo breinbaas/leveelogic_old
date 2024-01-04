@@ -9,4 +9,5 @@ class TestDeltaresRunner:
         dmc = DStability.from_stix("tests/testdata/stix/real_sample.stix")
 
         runner = Runner(models=[dma, dmb, dmc])
-        runner.execute()
+        result = runner.execute()
+        assert len(result) == 2

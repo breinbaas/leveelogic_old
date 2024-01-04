@@ -28,7 +28,7 @@ class SoilLayer(DataModel):
         """
         return (self.top + self.bottom) / 2.0
 
-    def to_points(self, left: float, right: float) -> List[Tuple]:
+    def to_points(self, left: float = 0.0, right: float = 0.0) -> List[Tuple]:
         """Convert the soillayer to points of the enclosing polygon
 
         Args:

@@ -17,6 +17,7 @@ pytest = "^7.4.3"
 shapely = "^2.0.2"
 coverage = "^7.3.2"
 anvil-uplink = "^0.4.2"
+xmltodict = "^0.13.0"
 
 
 [build-system]
