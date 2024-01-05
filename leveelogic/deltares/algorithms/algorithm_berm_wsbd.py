@@ -22,8 +22,6 @@ class AlgorithmBermWSBD(Algorithm):
     # ditch_land_side: float = nan
 
     def _check_input(self):
-        super()._check_input()
-
         # do we have this soilcode
         if not self.ds.has_soilcode(self.soilcode):
             raise AlgorithmInputCheckError(
@@ -81,7 +79,7 @@ class AlgorithmBermWSBD(Algorithm):
         # get all intersections with the top of the berm
         intersections = polyline_polyline_intersections([p3, p4], self.ds.surface)
 
-        # remove all intersections where x > p1.x because we want the intersections on the left side
+        # get all intersections on the left side of the toe of the levee
         left_intersections = [p for p in intersections if p[0] < p1[0]]
         # if we have no intersections then we do not intersect the surface on the left side
         if len(left_intersections) == 0:
@@ -89,44 +87,43 @@ class AlgorithmBermWSBD(Algorithm):
                 "No intersections on the left side of x_toe, can not create a berm"
             )
         # FIRST POINT OF BERM -> start of berm (left side)
-        p5 = left_intersections[-1]
+        pA = left_intersections[-1]
+        pB = (pA[0] + wi, pA[1] - wi / self.slope_top)
+        p5 = (self.ds.right, pB[1] - (self.ds.right - pB[0]) / self.slope_bottom)
 
-        # now get the intersections on the right side
-        right_intersections = [p for p in intersections if p[0] > p1[0]]
-
-        # SECOND POINT OF BERM - end of the berm (right side)
-        p6 = (p5[0] + wi, p5[1] - wi / self.slope_top)
-
-        # check for any surface intersections between p5 and p6
-        surface_intersections = [
-            p for p in intersections if p[0] > p5[0] and p[0] < p6[0]
-        ]
-        if len(surface_intersections) > 0:
-            raise NotImplementedError(
-                "Got intersections with the surface between the topleft and topright point of the berm, cannot deal with that right now..."
-            )
-
-        # now create a line from the topright point to the surface
-        p7 = (self.ds.right, p6[1] - (self.ds.right - p6[0]) / self.slope_bottom)
-
-        intersections = polyline_polyline_intersections([p6, p7], self.ds.surface)
+        intersections = polyline_polyline_intersections([pB, p5], self.ds.surface)
+        # if we have no intersections then we do not intersect the surface on the left side
         if len(intersections) == 0:
             raise ValueError(
-                "No intersections between the topright point of the berm and the surface, can not create a berm"
+                "No intersections between point B and p5, cannot create berm"
+            )
+        pC = intersections[-1]
+
+        intersections = (
+            [pA] + polyline_polyline_intersections([pA, pB, pC], self.ds.surface) + [pC]
+        )
+
+        if len(intersections) % 2 != 0:
+            raise ValueError(
+                "The berm continues outside of the right limit of the geometry, cannot create berm"
             )
 
-        # THIRD POINT OF BERM - end of berm at surface
-        p8 = intersections[0]
+        for i in range(0, len(intersections), 2):
+            # get the left and right point of the berm
+            p1 = intersections[i]
+            p2 = intersections[i + 1]
 
-        # now create the layer points (we need to use the Point class for this)
-        new_layer_points = [Point(x=p[0], z=p[1]) for p in [p5, p6, p8]]
+            # check if we need to add the knikpunt of the berm
+            if p1[0] < pB[0] and pB[0] < p2[0]:
+                points = [p1, pB, p2]
+            else:
+                points = [p1, p2]
 
-        # we also need to add the bottom of the layer
-        new_layer_points += [
-            Point(x=p[0], z=p[1])
-            for p in self.ds.surface_points_between(p5[0], p8[0])[::-1]
-        ]
+            # now follow the surface back to p1
+            points += self.ds.surface_points_between(p1[0], p2[0])[::-1]
 
-        ds.model.add_layer(new_layer_points, self.soilcode)
+            # convert to deltares points
+            new_layer_points = [Point(x=p[0], z=p[1]) for p in points]
+            ds.model.add_layer(new_layer_points, self.soilcode)
 
         return ds
