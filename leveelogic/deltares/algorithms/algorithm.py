@@ -19,6 +19,7 @@ class Algorithm(BaseModel, metaclass=abc.ABCMeta):
     """
 
     ds: DStability
+    log: List[str] = []
 
     def execute(self) -> DStability:
         try:

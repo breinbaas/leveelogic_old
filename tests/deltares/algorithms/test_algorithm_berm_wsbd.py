@@ -28,12 +28,15 @@ class TestAlgorithmBermWSBD:
             ds=ds,
             soilcode="Embankment dry",
             slope_top=10,
-            slope_bottom=1,
+            slope_bottom=2,
             initial_height=5.0,
             initial_width=10.0,
+            height_step=0.5,
+            steps=5,
         )
-        ds = alg.execute()
-        ds.serialize("tests/testdata/output/spikey_geometry_berm.stix")
+        dss = alg.execute_multiple_results()
+        for i, ds in enumerate(dss):
+            ds.serialize(f"tests/testdata/output/spikey_geometry_berm_{i}.stix")
 
     def test_execute_invalid(self):
         ds = DStability.from_stix("tests/testdata/stix/simple_geometry.stix")

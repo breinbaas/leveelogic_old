@@ -1,5 +1,6 @@
 from pydantic import BaseModel, DirectoryPath, FilePath
 import geolib as gl
+from enum import IntEnum
 from pathlib import Path
 from shapely.geometry import Polygon, LineString
 from shapely.geometry.polygon import orient
@@ -29,6 +30,13 @@ load_dotenv()
 DSTABILITY_MIGRATION_CONSOLE_PATH = os.getenv("DSTABILITY_MIGRATION_CONSOLE_PATH")
 
 
+class MaterialLayoutType(IntEnum):
+    CLAY_EMBANKEMENT_ON_CLAY = 10
+    SAND_EMBANKEMENT_ON_CLAY = 11
+    CLAY_EMBANKEMENT_ON_SAND = 12
+    SAND_EMBANKEMENT_ON_SAND = 13
+
+
 class DStability(BaseModel):
     name: str = ""
     characteristic_points: List[CharacteristicPoint] = []
@@ -37,9 +45,12 @@ class DStability(BaseModel):
     current_stage_index: int = 0
     soillayers: List[Dict] = []
     soils: Dict = {}
+    headlines: List[Dict] = []
+    result: Dict = {}
     points: List[Tuple[float, float]] = []
     boundary: List[Tuple[float, float]] = []
     surface: List[Tuple[float, float]] = []
+    waternet_settings: Dict = {}
 
     @classmethod
     def from_stix(cls, stix_file: str, auto_upgrade=True) -> "DStability":
@@ -137,6 +148,14 @@ class DStability(BaseModel):
             return [(p.X, p.Z) for p in self.phreatic_line.Points]
         else:
             return []
+
+    def get_characteristic_point(
+        self, point_type: CharacteristicPointType
+    ) -> CharacteristicPoint:
+        for cp in self.characteristic_points:
+            if cp.point_type == point_type:
+                return cp
+        raise ValueError(f"Invalid characteristic point type ({point_type}) requested")
 
     def get_headline_by_label(self, label: str = "") -> PersistableHeadLine:
         for hl in self.model.waternets[0].HeadLines:
@@ -304,76 +323,74 @@ class DStability(BaseModel):
         idx_right = self.surface.index(rightmost_point)
         self.surface = self.surface[: idx_right + 1]
 
-    def set_characteristic_point(self, x: float, point_type: CharacteristicPointType):
-        """Add a characteristic point to the model, this will also check if you are trying to
-        add a point that is already in the model. If so it will replace the old one. This only
-        applies to points that can only have one in the model
-
-        Args:
-            x (float): The x coordinate
-            characteristic_point_type (CharacteristicPointType): The type of characteristic point
-        """
-        # there can only be one of the following types so if this is about them
-        # then just change the x value
-        if point_type in [
-            CharacteristicPointType.TOE_LEFT,
-            CharacteristicPointType.CREST_LEFT,
-            CharacteristicPointType.REFERENCE_POINT,
-            CharacteristicPointType.CREST_RIGHT,
-            CharacteristicPointType.TOE_RIGHT,
-            CharacteristicPointType.START_POLDER,
-            CharacteristicPointType.START_SURFACE,
-            CharacteristicPointType.END_SURFACE,
-        ]:
-            if self.get_characteristic_point(point_type) is not None:
-                for i in range(len(self.characteristic_points)):
-                    if self.characteristic_points[i].point_type == point_type:
-                        self.characteristic_points[i].x = x
-            else:
-                self.characteristic_points.append(
-                    CharacteristicPoint(x=x, point_type=point_type)
-                )
-        else:
-            self.characteristic_points.append(
-                CharacteristicPoint(x=x, point_type=point_type)
+        # headlines
+        for hl in self.model.waternets[0].HeadLines:
+            self.headlines.append(
+                {
+                    "label": hl.Label,
+                    "points": [(p.X, p.Z) for p in hl.Points],
+                    "is_phreatic": hl.Id == self.model.waternets[0].PhreaticLineId,
+                }
             )
 
-    def get_characteristic_point(
-        self, point_type: CharacteristicPointType
-    ) -> Optional[Union[CharacteristicPoint, List[CharacteristicPoint]]]:
-        """Get a (list of) characteristic points on this model based on the given point type, if the type is of
-        toe left, toe right, crest left, crest right, reference point, start polder, start and end surface
-        the result is a single point, all other points can be lists. If no point(s) is / are found the result will be None
-
-        Args:
-            characteristic_point_type (CharacteristicPointType): The type of characteristic point
-
-        Returns:
-           Optional[Union[CharacteristicPoint, List[CharacteristicPoint]]]: A list with the points or a single point or None
-        """
-        result = None
-        if point_type in [
-            CharacteristicPointType.TOE_LEFT,
-            CharacteristicPointType.CREST_LEFT,
-            CharacteristicPointType.REFERENCE_POINT,
-            CharacteristicPointType.CREST_RIGHT,
-            CharacteristicPointType.TOE_RIGHT,
-            CharacteristicPointType.START_POLDER,
-            CharacteristicPointType.START_SURFACE,
-            CharacteristicPointType.END_SURFACE,
-        ]:
-            for cp in self.characteristic_points:
-                if cp.point_type == point_type:
-                    result = cp
-                    break
-        else:
-            result = [
-                cp for cp in self.characteristic_points if cp.point_type == point_type
-            ]
-            if result == []:
-                result = None
-
-        return result
+        # karakteristieke punten
+        wns = self.model.datastructure.waternetcreatorsettings[0]
+        # ditch
+        self.characteristic_points.append(
+            CharacteristicPoint(
+                x=wns.DitchCharacteristics.DitchBottomEmbankmentSide,
+                point_type=CharacteristicPointType.DITCH_BOTTOM_EMBANKEMENT_SIDE,
+            )
+        )
+        self.characteristic_points.append(
+            CharacteristicPoint(
+                x=wns.DitchCharacteristics.DitchBottomLandSide,
+                point_type=CharacteristicPointType.DITCH_BOTTOM_LAND_SIDE,
+            )
+        )
+        self.characteristic_points.append(
+            CharacteristicPoint(
+                x=wns.DitchCharacteristics.DitchEmbankmentSide,
+                point_type=CharacteristicPointType.DITCH_EMBANKEMENT_SIDE,
+            )
+        )
+        self.characteristic_points.append(
+            CharacteristicPoint(
+                x=wns.DitchCharacteristics.DitchLandSide,
+                point_type=CharacteristicPointType.DITCH_LAND_SIDE,
+            )
+        )
+        # embankement
+        self.characteristic_points.append(
+            CharacteristicPoint(
+                x=wns.EmbankmentCharacteristics.EmbankmentToeLandSide,
+                point_type=CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE,
+            )
+        )
+        self.characteristic_points.append(
+            CharacteristicPoint(
+                x=wns.EmbankmentCharacteristics.EmbankmentToeWaterSide,
+                point_type=CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE,
+            )
+        )
+        self.characteristic_points.append(
+            CharacteristicPoint(
+                x=wns.EmbankmentCharacteristics.EmbankmentTopLandSide,
+                point_type=CharacteristicPointType.EMBANKEMENT_TOP_LAND_SIDE,
+            )
+        )
+        self.characteristic_points.append(
+            CharacteristicPoint(
+                x=wns.EmbankmentCharacteristics.EmbankmentTopWaterSide,
+                point_type=CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE,
+            )
+        )
+        self.characteristic_points.append(
+            CharacteristicPoint(
+                x=wns.EmbankmentCharacteristics.ShoulderBaseLandSide,
+                point_type=CharacteristicPointType.SHOULDER_BASE_LAND_SIDE,
+            )
+        )
 
     def surface_intersections(
         self, polyline: List[Tuple[float, float]]

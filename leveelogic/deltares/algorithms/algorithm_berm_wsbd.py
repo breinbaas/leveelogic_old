@@ -1,6 +1,8 @@
 from copy import deepcopy
 from geolib.geometry import Point
 from math import isnan, nan
+import numpy as np
+from typing import List
 
 from ..dstability import DStability
 from .algorithm import Algorithm, AlgorithmInputCheckError
@@ -14,6 +16,8 @@ class AlgorithmBermWSBD(Algorithm):
     slope_bottom: float
     initial_width: float
     initial_height: float
+    height_step: float
+    steps: int = 10
 
     embankement_toe_land_side: float = nan
     # ditch_embankement_side: float = nan
@@ -60,70 +64,101 @@ class AlgorithmBermWSBD(Algorithm):
         #     0
         # ].DitchCharacteristics.DitchLandSide
 
-    def _execute(self) -> DStability:
-        ds = deepcopy(self.ds)
+    def _execute_multiple_results(self) -> List[DStability]:
+        result = []
 
-        xt = self.embankement_toe_land_side
-        wi = self.initial_width
-        hi = self.initial_height
+        for i in range(self.steps):
+            try:
+                ds = deepcopy(self.ds)
 
-        # toe of the levee
-        p1 = (xt, self.ds.z_at(xt)[0])
-        # toe of the levee plus the initial height
-        p2 = (xt, p1[1] + hi)
-        # left most points based on slope s1
-        p3 = (self.ds.left, p2[1] + (xt - self.ds.left) / self.slope_top)
-        #  rightmost point based on slope s1
-        p4 = (self.ds.right, p2[1] - (self.ds.right - xt) / self.slope_top)
+                xt = self.embankement_toe_land_side
+                dz = i * self.height_step
+                dx = dz / ((self.slope_top + self.slope_bottom) / 2.0)
+                wi = self.initial_width + dx
+                hi = self.initial_height + dz
 
-        # get all intersections with the top of the berm
-        intersections = polyline_polyline_intersections([p3, p4], self.ds.surface)
+                # toe of the levee
+                p1 = (xt, self.ds.z_at(xt)[0])
+                # toe of the levee plus the initial height
+                p2 = (xt, p1[1] + hi)
+                # left most points based on slope s1
+                p3 = (self.ds.left, p2[1] + (xt - self.ds.left) / self.slope_top)
+                #  rightmost point based on slope s1
+                p4 = (self.ds.right, p2[1] - (self.ds.right - xt) / self.slope_top)
 
-        # get all intersections on the left side of the toe of the levee
-        left_intersections = [p for p in intersections if p[0] < p1[0]]
-        # if we have no intersections then we do not intersect the surface on the left side
-        if len(left_intersections) == 0:
-            raise ValueError(
-                "No intersections on the left side of x_toe, can not create a berm"
-            )
-        # FIRST POINT OF BERM -> start of berm (left side)
-        pA = left_intersections[-1]
-        pB = (pA[0] + wi, pA[1] - wi / self.slope_top)
-        p5 = (self.ds.right, pB[1] - (self.ds.right - pB[0]) / self.slope_bottom)
+                # get all intersections with the top of the berm
+                intersections = polyline_polyline_intersections(
+                    [p3, p4], self.ds.surface
+                )
 
-        intersections = polyline_polyline_intersections([pB, p5], self.ds.surface)
-        # if we have no intersections then we do not intersect the surface on the left side
-        if len(intersections) == 0:
-            raise ValueError(
-                "No intersections between point B and p5, cannot create berm"
-            )
-        pC = intersections[-1]
+                # get all intersections on the left side of the toe of the levee
+                left_intersections = [p for p in intersections if p[0] < p1[0]]
+                # if we have no intersections then we do not intersect the surface on the left side
+                if len(left_intersections) == 0:
+                    raise ValueError(
+                        "No intersections on the left side of x_toe, can not create a berm"
+                    )
+                # FIRST POINT OF BERM -> start of berm (left side)
+                pA = left_intersections[-1]
+                pB = (pA[0] + wi, pA[1] - wi / self.slope_top)
+                p5 = (
+                    self.ds.right,
+                    pB[1] - (self.ds.right - pB[0]) / self.slope_bottom,
+                )
 
-        intersections = (
-            [pA] + polyline_polyline_intersections([pA, pB, pC], self.ds.surface) + [pC]
-        )
+                intersections = polyline_polyline_intersections(
+                    [pB, p5], self.ds.surface
+                )
+                # if we have no intersections then we do not intersect the surface on the left side
+                if len(intersections) == 0:
+                    raise ValueError(
+                        "No intersections between point B and p5, cannot create berm"
+                    )
+                pC = intersections[-1]
 
-        if len(intersections) % 2 != 0:
-            raise ValueError(
-                "The berm continues outside of the right limit of the geometry, cannot create berm"
-            )
+                intersections = polyline_polyline_intersections(
+                    [pA, pB, pC], self.ds.surface
+                )
+                intersections = [
+                    (round(p[0], 3), round(p[1], 3)) for p in intersections
+                ]
 
-        for i in range(0, len(intersections), 2):
-            # get the left and right point of the berm
-            p1 = intersections[i]
-            p2 = intersections[i + 1]
+                if not (round(pA[0], 3), round(pA[1], 3)) in intersections:
+                    intersections.insert(0, pA)
+                if not (round(pC[0], 3), round(pC[1], 3)) in intersections:
+                    intersections.append(pC)
 
-            # check if we need to add the knikpunt of the berm
-            if p1[0] < pB[0] and pB[0] < p2[0]:
-                points = [p1, pB, p2]
-            else:
-                points = [p1, p2]
+                # TODO theoretically this check can go wrong if the right point of a part of the berm
+                # meets the left point of the next berm (so if they share a geometry point)
+                # this actually happens in the test case but in practice this can be ignored
+                # it could be solved in code though.. that's why this is a TODO
+                if len(intersections) % 2 != 0:
+                    raise ValueError(
+                        "The berm continues outside of the right limit of the geometry, cannot create berm"
+                    )
 
-            # now follow the surface back to p1
-            points += self.ds.surface_points_between(p1[0], p2[0])[::-1]
+                for i in range(0, len(intersections), 2):
+                    # get the left and right point of the berm
+                    p1 = intersections[i]
+                    p2 = intersections[i + 1]
 
-            # convert to deltares points
-            new_layer_points = [Point(x=p[0], z=p[1]) for p in points]
-            ds.model.add_layer(new_layer_points, self.soilcode)
+                    # check if we need to add the knikpunt of the berm
+                    if p1[0] < pB[0] and pB[0] < p2[0]:
+                        points = [p1, pB, p2]
+                    else:
+                        points = [p1, p2]
 
-        return ds
+                    # now follow the surface back to p1
+                    points += self.ds.surface_points_between(p1[0], p2[0])[::-1]
+
+                    # convert to deltares points
+                    new_layer_points = [Point(x=p[0], z=p[1]) for p in points]
+                    ds.model.add_layer(new_layer_points, self.soilcode)
+                    
+                result.append(ds)
+            except Exception as e:
+                self.log.append(
+                    f"Error creating berm with width={wi}, height={hi}, got error '{e}'"
+                )
+
+        return result
