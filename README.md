@@ -20,8 +20,8 @@ For users;
 
 For developers;
 
-* [ ] Automated packaging for pip install
-* [ ] Automated testing CI/CD
+* [X] Automated packaging for pip install
+* [X] Automated testing CI/CD
 
 and more... 
 
