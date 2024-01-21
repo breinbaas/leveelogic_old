@@ -1,4 +1,5 @@
 from enum import IntEnum
+from math import nan
 
 from ..models.datamodel import DataModel
 
@@ -6,38 +7,28 @@ from ..models.datamodel import DataModel
 class CharacteristicPointType(IntEnum):
     NONE = 0
 
-    START_SURFACE = 10  # maaiveld buitenwaarts
-    END_SURFACE = 11  # maaiveld binnenwaarts
-
-    REFERENCE_POINT = 20
-    TOE_LEFT = 21
-    CREST_LEFT = 22
-    CREST_RIGHT = 23
-    TOE_RIGHT = 24
-
-    START_ROAD = 30
-    END_ROAD = 31
-
-    START_POLDER = 40
-
-    START_DITCH = 50
-    END_DITCH = 51
+    EMBANKEMENT_TOE_WATER_SIDE = 10
+    EMBANKEMENT_TOP_WATER_SIDE = 11
+    EMBANKEMENT_TOP_LAND_SIDE = 12
+    SHOULDER_BASE_LAND_SIDE = 13
+    EMBANKEMENT_TOE_LAND_SIDE = 14
+    DITCH_EMBANKEMENT_SIDE = 15
+    DITCH_BOTTOM_EMBANKEMENT_SIDE = 16
+    DITCH_BOTTOM_LAND_SIDE = 17
+    DITCH_LAND_SIDE = 18
 
 
 CharacteristicPointNames = {
     CharacteristicPointType.NONE: "none",
-    CharacteristicPointType.START_SURFACE: "start surface",
-    CharacteristicPointType.END_SURFACE: "end surface",
-    CharacteristicPointType.REFERENCE_POINT: "reference point",
-    CharacteristicPointType.TOE_LEFT: "toe left",
-    CharacteristicPointType.CREST_LEFT: "crest left",
-    CharacteristicPointType.CREST_RIGHT: "crest right",
-    CharacteristicPointType.TOE_RIGHT: "toe right",
-    CharacteristicPointType.START_ROAD: "start road",
-    CharacteristicPointType.END_ROAD: "end road",
-    CharacteristicPointType.START_POLDER: "start polder",
-    CharacteristicPointType.START_DITCH: "start ditch",
-    CharacteristicPointType.END_DITCH: "end ditch",
+    CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE: "embankement toe water side",
+    CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE: "embankement top water side",
+    CharacteristicPointType.EMBANKEMENT_TOP_LAND_SIDE: "embankement top land side",
+    CharacteristicPointType.SHOULDER_BASE_LAND_SIDE: "shoulder base land side",
+    CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE: "embankement toe land side",
+    CharacteristicPointType.DITCH_EMBANKEMENT_SIDE: "ditch embankement side",
+    CharacteristicPointType.DITCH_BOTTOM_EMBANKEMENT_SIDE: "ditch bottom embankement side",
+    CharacteristicPointType.DITCH_BOTTOM_LAND_SIDE: "ditch land side",
+    CharacteristicPointType.DITCH_LAND_SIDE: "ditch land side",
 }
 
 
@@ -46,3 +37,7 @@ class CharacteristicPoint(DataModel):
 
     x: float
     point_type: CharacteristicPointType
+
+    @property
+    def is_valid(self) -> bool:
+        self.x != nan

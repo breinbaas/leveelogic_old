@@ -17,6 +17,9 @@ CPT_FR_MAX = 10.0
 
 # URLs
 BRO_CPT_DOWNLOAD_URL = "https://publiek.broservices.nl/sr/cpt/v1/objects"
+BRO_CPT_CHARACTERISTICS_URL = (
+    f"https://publiek.broservices.nl/sr/cpt/v1/characteristics/searches"
+)
 
 # soil code translation dictionaries
 nen5104_main_soilname_dict = {

@@ -3,12 +3,12 @@ from typing import List, Dict
 import abc
 from ..dstability import DStability
 
-from ...geometry.characteristic_point import CharacteristicPoint
-
 
 class AlgorithmExecutionError(Exception):
-    """This exception is raised if an error occured during execution"""
+    pass
 
+
+class AlgorithmInputCheckError(Exception):
     pass
 
 
@@ -19,8 +19,19 @@ class Algorithm(BaseModel, metaclass=abc.ABCMeta):
     """
 
     ds: DStability
+    log: List[str] = []
 
-    def execute(self):
+    def execute(self) -> DStability:
+        try:
+            self._check_input()
+        except Exception as e:
+            raise AlgorithmInputCheckError(
+                f"Could not execute algorithm, got error '{e}'"
+            )
+
+        return self._execute()
+
+    def execute_multiple_results(self) -> List[DStability]:
         try:
             self._check_input()
         except Exception as e:
@@ -28,12 +39,14 @@ class Algorithm(BaseModel, metaclass=abc.ABCMeta):
                 f"Could not execute algorithm, got error '{e}'"
             )
 
-        return self._execute()
+        return self._execute_multiple_results()
 
     @abc.abstractmethod
     def _check_input(self):
         raise NotImplementedError
 
-    @abc.abstractmethod
     def _execute(self) -> DStability:
+        raise NotImplementedError
+
+    def _execute_multiple_results(self) -> List[DStability]:
         raise NotImplementedError
