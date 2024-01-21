@@ -25,7 +25,7 @@ class Algorithm(BaseModel, metaclass=abc.ABCMeta):
         try:
             self._check_input()
         except Exception as e:
-            raise AlgorithmExecutionError(
+            raise AlgorithmInputCheckError(
                 f"Could not execute algorithm, got error '{e}'"
             )
 

@@ -152,10 +152,60 @@ class DStability(BaseModel):
     def get_characteristic_point(
         self, point_type: CharacteristicPointType
     ) -> CharacteristicPoint:
-        for cp in self.characteristic_points:
-            if cp.point_type == point_type:
-                return cp
-        raise ValueError(f"Invalid characteristic point type ({point_type}) requested")
+        # karakteristieke punten
+        wns = self.model.datastructure.waternetcreatorsettings[0]
+
+        if point_type == CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE:
+            return CharacteristicPoint(
+                x=wns.EmbankmentCharacteristics.EmbankmentToeWaterSide,
+                point_type=CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE,
+            )
+        elif point_type == CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE:
+            return CharacteristicPoint(
+                x=wns.EmbankmentCharacteristics.EmbankmentTopWaterSide,
+                point_type=CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE,
+            )
+        elif point_type == CharacteristicPointType.EMBANKEMENT_TOP_LAND_SIDE:
+            return CharacteristicPoint(
+                x=wns.EmbankmentCharacteristics.EmbankmentTopLandSide,
+                point_type=CharacteristicPointType.EMBANKEMENT_TOP_LAND_SIDE,
+            )
+
+        elif point_type == CharacteristicPointType.SHOULDER_BASE_LAND_SIDE:
+            return CharacteristicPoint(
+                x=wns.EmbankmentCharacteristics.ShoulderBaseLandSide,
+                point_type=CharacteristicPointType.SHOULDER_BASE_LAND_SIDE,
+            )
+        elif point_type == CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE:
+            return CharacteristicPoint(
+                x=wns.EmbankmentCharacteristics.EmbankmentToeLandSide,
+                point_type=CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE,
+            )
+        elif point_type == CharacteristicPointType.DITCH_EMBANKEMENT_SIDE:
+            return CharacteristicPoint(
+                x=wns.DitchCharacteristics.DitchEmbankmentSide,
+                point_type=CharacteristicPointType.DITCH_EMBANKEMENT_SIDE,
+            )
+        elif point_type == CharacteristicPointType.DITCH_BOTTOM_EMBANKEMENT_SIDE:
+            return CharacteristicPoint(
+                x=wns.DitchCharacteristics.DitchBottomEmbankmentSide,
+                point_type=CharacteristicPointType.DITCH_BOTTOM_EMBANKEMENT_SIDE,
+            )
+        elif point_type == CharacteristicPointType.DITCH_BOTTOM_LAND_SIDE:
+            return CharacteristicPoint(
+                x=wns.DitchCharacteristics.DitchBottomLandSide,
+                point_type=CharacteristicPointType.DITCH_BOTTOM_LAND_SIDE,
+            )
+        elif point_type == CharacteristicPointType.DITCH_LAND_SIDE:
+            return CharacteristicPoint(
+                x=wns.DitchCharacteristics.DitchLandSide,
+                point_type=CharacteristicPointType.DITCH_LAND_SIDE,
+            )
+
+        else:
+            raise ValueError(
+                f"Invalid characteristic point type ({point_type}) requested"
+            )
 
     def get_headline_by_label(self, label: str = "") -> PersistableHeadLine:
         for hl in self.model.waternets[0].HeadLines:
@@ -333,65 +383,6 @@ class DStability(BaseModel):
                 }
             )
 
-        # karakteristieke punten
-        wns = self.model.datastructure.waternetcreatorsettings[0]
-        # ditch
-        self.characteristic_points.append(
-            CharacteristicPoint(
-                x=wns.DitchCharacteristics.DitchBottomEmbankmentSide,
-                point_type=CharacteristicPointType.DITCH_BOTTOM_EMBANKEMENT_SIDE,
-            )
-        )
-        self.characteristic_points.append(
-            CharacteristicPoint(
-                x=wns.DitchCharacteristics.DitchBottomLandSide,
-                point_type=CharacteristicPointType.DITCH_BOTTOM_LAND_SIDE,
-            )
-        )
-        self.characteristic_points.append(
-            CharacteristicPoint(
-                x=wns.DitchCharacteristics.DitchEmbankmentSide,
-                point_type=CharacteristicPointType.DITCH_EMBANKEMENT_SIDE,
-            )
-        )
-        self.characteristic_points.append(
-            CharacteristicPoint(
-                x=wns.DitchCharacteristics.DitchLandSide,
-                point_type=CharacteristicPointType.DITCH_LAND_SIDE,
-            )
-        )
-        # embankement
-        self.characteristic_points.append(
-            CharacteristicPoint(
-                x=wns.EmbankmentCharacteristics.EmbankmentToeLandSide,
-                point_type=CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE,
-            )
-        )
-        self.characteristic_points.append(
-            CharacteristicPoint(
-                x=wns.EmbankmentCharacteristics.EmbankmentToeWaterSide,
-                point_type=CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE,
-            )
-        )
-        self.characteristic_points.append(
-            CharacteristicPoint(
-                x=wns.EmbankmentCharacteristics.EmbankmentTopLandSide,
-                point_type=CharacteristicPointType.EMBANKEMENT_TOP_LAND_SIDE,
-            )
-        )
-        self.characteristic_points.append(
-            CharacteristicPoint(
-                x=wns.EmbankmentCharacteristics.EmbankmentTopWaterSide,
-                point_type=CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE,
-            )
-        )
-        self.characteristic_points.append(
-            CharacteristicPoint(
-                x=wns.EmbankmentCharacteristics.ShoulderBaseLandSide,
-                point_type=CharacteristicPointType.SHOULDER_BASE_LAND_SIDE,
-            )
-        )
-
     def surface_intersections(
         self, polyline: List[Tuple[float, float]]
     ) -> List[Tuple[float, float]]:
@@ -486,6 +477,9 @@ class DStability(BaseModel):
             location (Union[FilePath, DirectoryPath, BinaryIO]): The path to save to
         """
         self.model.serialize(location)
+
+    def execute(self):
+        self.model = self.model.execute()
 
     def extract_soilparameters(self) -> List[str]:
         result = [

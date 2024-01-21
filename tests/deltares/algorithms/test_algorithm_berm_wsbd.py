@@ -15,8 +15,8 @@ class TestAlgorithmBermWSBD:
             soilcode="Dijksmateriaal (klei)_K3_CPhi",
             slope_top=10,
             slope_bottom=1,
-            initial_height=2.0,
-            initial_width=6.0,
+            height=2.0,
+            width=6.0,
         )
         ds = alg.execute()
         ds.serialize("tests/testdata/output/fc_alg_pl_wsbd_berm.stix")
@@ -29,14 +29,11 @@ class TestAlgorithmBermWSBD:
             soilcode="Embankment dry",
             slope_top=10,
             slope_bottom=2,
-            initial_height=5.0,
-            initial_width=10.0,
-            height_step=0.5,
-            steps=5,
+            height=5.0,
+            width=10.0,
         )
-        dss = alg.execute_multiple_results()
-        for i, ds in enumerate(dss):
-            ds.serialize(f"tests/testdata/output/spikey_geometry_berm_{i}.stix")
+        ds = alg.execute()
+        ds.serialize(f"tests/testdata/output/spikey_geometry_berm.stix")
 
     def test_execute_invalid(self):
         ds = DStability.from_stix("tests/testdata/stix/simple_geometry.stix")
@@ -45,8 +42,8 @@ class TestAlgorithmBermWSBD:
             soilcode="Embankment dry",
             slope_top=10,
             slope_bottom=1,
-            initial_height=2.0,
-            initial_width=6.0,
+            height=2.0,
+            width=6.0,
         )
         with pytest.raises(AlgorithmInputCheckError):
             ds = alg.execute()
