@@ -357,7 +357,8 @@ def line_polyline_intersections(
 
 
 def polyline_polyline_intersections(
-    points_line1: List[Tuple[float, float]], points_line2: List[Tuple[float, float]]
+    points_line1: List[Tuple[float, float]],
+    points_line2: List[Tuple[float, float]],
 ):
     result = []
     ls1 = LineString(points_line1)
@@ -374,4 +375,7 @@ def polyline_polyline_intersections(
             f"Unimplemented intersection type '{type(intersections)}'"
         )
 
-    return sorted(result, key=lambda x: x[0])
+    # do not include points that are on line1 or line2
+    final_result = [p for p in result if not p in points_line1 or p in points_line2]
+
+    return sorted(final_result, key=lambda x: x[0])
