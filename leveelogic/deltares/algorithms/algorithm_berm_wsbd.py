@@ -63,7 +63,6 @@ class AlgorithmBermWSBD(Algorithm):
         # ].DitchCharacteristics.DitchLandSide
 
     def _execute(self) -> DStability:
-        self._check_input()
         ds = deepcopy(self.ds)
 
         # toe of the levee
@@ -96,7 +95,7 @@ class AlgorithmBermWSBD(Algorithm):
             )
         # FIRST POINT OF BERM -> start of berm (left side)
         pA = left_intersections[-1]
-        pB = (pA[0] + self.height, pA[1] - self.height / self.slope_top)
+        pB = (pA[0] + self.width, pA[1] - self.width / self.slope_top)
         p5 = (
             self.ds.right,
             pB[1] - (self.ds.right - pB[0]) / self.slope_bottom,
