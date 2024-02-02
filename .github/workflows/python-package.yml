@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.11"]
 
     steps:
     - uses: actions/checkout@v3
@@ -44,5 +44,9 @@ jobs:
     - name: Run tests
       run: |
         source .venv/bin/activate
-        pytest tests/
-        coverage report
+        pytest tests/     
+    - name: Publish package
+      run: poetry config pypi-token.pypi "${{ secrets.PYPI_API_TOKEN }}"    
+    - run: poetry publish --build
+    
+    
