@@ -271,6 +271,7 @@ Here's an image of a possible result;
 ![Algorithm berm](img/algorithm_phreatic_line.png)
 
 **Note** Yep, still working on the ditch, it's an easy fix but I wanted to have the preliminary version out
+**Note** There is an request sent to Deltares (january 2024) to be able to call the waternet creator from code, so far it is not implemented. This would enable an easy adjustement of the phreatic level.
 
 #### Algorithm tree
 
