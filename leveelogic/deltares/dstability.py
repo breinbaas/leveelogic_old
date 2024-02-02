@@ -79,6 +79,7 @@ class DStability(BaseModel):
                 raise e
 
         result.set_scenario_and_stage(0, 0)
+        result._post_process()
         return result
 
     @property
@@ -148,6 +149,39 @@ class DStability(BaseModel):
             return [(p.X, p.Z) for p in self.phreatic_line.Points]
         else:
             return []
+
+    def get_closest_point_from_x(self, x: float) -> Tuple[float, float]:
+        """Get the closest point to the given x coordinate
+
+        Args:
+            x (float): The x coordinate
+
+        Returns:
+            Tuple[float, float]: The x and z coordinate of the closest point
+        """
+        result, dlmin = None, 1e9
+
+        for p in self.surface:
+            dl = abs(p[0] - x)
+            if dl < dlmin:
+                result = p
+                dlmin = dl
+
+        return result
+
+    def add_layer(
+        self,
+        points: List[Point],
+        soil_code: str,
+        label: str = "",
+        notes: str = "",
+        scenario_index: Optional[int] = None,
+        stage_index: Optional[int] = None,
+    ) -> int:
+        self.model.add_layer(
+            points, soil_code, label, notes, scenario_index, stage_index
+        )
+        self._post_process()
 
     def get_characteristic_point(
         self, point_type: CharacteristicPointType
@@ -243,6 +277,7 @@ class DStability(BaseModel):
                     )
                 for i in range(len(coords)):
                     hl.Points[i] = PersistablePoint(X=coords[i][0], Z=coords[i][1])
+                self._post_process()
                 return
 
         raise ValueError(f"Invalid headline label '{label}' (not found)")
@@ -294,6 +329,7 @@ class DStability(BaseModel):
             scenario_index=self.current_scenario_index,
             stage_index=self.current_stage_index,
         )
+        self._post_process()
 
     def _post_process(self):
         """Do some post processing stuff to set properties and save time"""
@@ -400,7 +436,7 @@ class DStability(BaseModel):
         Returns:
             List[Tuple[float, float]]: List of surface points between left and right
         """
-        return [p for p in self.surface if p[0] >= left and p[0] <= right]
+        return [p for p in self.surface if p[0] > left and p[0] < right]
 
     def set_scenario_and_stage(self, scenario_index: int, stage_index: int):
         """Set the current scenario and stage
@@ -423,8 +459,6 @@ class DStability(BaseModel):
             raise ValueError(
                 f"Trying to set an invalid stage index for scenario {self.current_scenario_index}"
             )
-
-        self._post_process()
 
     def z_at(self, x, scenario_index: int = 0, stage_index: int = 0) -> List[float]:
         """Get a list of z coordinates from intersections with the soillayers on coordinate x
@@ -453,7 +487,7 @@ class DStability(BaseModel):
                     else:
                         zs.append(p1.Z + (x - p1.X) / (p2.X - p1.X) * (p2.Z - p1.Z))
 
-        for r in zs:
+        for r in [round(f, 3) for f in zs]:
             if not r in result:
                 result.append(r)
 
@@ -511,24 +545,24 @@ class DStability(BaseModel):
                     == ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_ADVANCED
                 ):
                     d["model"] = "MOHR_COULOMB_ADVANCED"
-                    d[
-                        "c"
-                    ] = f"{soil.MohrCoulombAdvancedShearStrengthModel.Cohesion:.2f}"
-                    d[
-                        "phi"
-                    ] = f"{soil.MohrCoulombAdvancedShearStrengthModel.FrictionAngle:.2f}"
-                    d[
-                        "dilatancy"
-                    ] = f"{soil.MohrCoulombAdvancedShearStrengthModel.Dilatancy:.2f}"
+                    d["c"] = (
+                        f"{soil.MohrCoulombAdvancedShearStrengthModel.Cohesion:.2f}"
+                    )
+                    d["phi"] = (
+                        f"{soil.MohrCoulombAdvancedShearStrengthModel.FrictionAngle:.2f}"
+                    )
+                    d["dilatancy"] = (
+                        f"{soil.MohrCoulombAdvancedShearStrengthModel.Dilatancy:.2f}"
+                    )
                 elif (
                     ssma
                     == ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_CLASSIC
                 ):
                     d["model"] = "MOHR_COULOMB_CLASSIC"
                     d["c"] = f"{soil.MohrCoulombClassicShearStrengthModel.Cohesion:.2f}"
-                    d[
-                        "phi"
-                    ] = f"{soil.MohrCoulombClassicShearStrengthModel.FrictionAngle:.2f}"
+                    d["phi"] = (
+                        f"{soil.MohrCoulombClassicShearStrengthModel.FrictionAngle:.2f}"
+                    )
                 elif ssma == ShearStrengthModelTypePhreaticLevelInternal.NONE:
                     d["model"] = "NONE"
                 elif ssma == ShearStrengthModelTypePhreaticLevelInternal.SU:
