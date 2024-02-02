@@ -372,12 +372,15 @@ def polyline_polyline_intersections(
     elif type(intersections) == Point:
         x, y = intersections.coords.xy
         result.append((x[0], y[0]))
+    elif intersections.is_empty:
+        return []
     else:
-        raise NotImplementedError(
-            f"Unimplemented intersection type '{type(intersections)}'"
-        )
+        raise ValueError(f"Unimplemented intersection type '{type(intersections)}'")
 
     # do not include points that are on line1 or line2
     final_result = [p for p in result if not p in points_line1 or p in points_line2]
+
+    if len(final_result) == 0:
+        return []
 
     return sorted(final_result, key=lambda x: x[0])

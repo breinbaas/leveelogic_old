@@ -128,7 +128,8 @@ class AlgorithmBermWSBD(Algorithm):
             )
         # FIRST POINT OF BERM -> start of berm (left side)
         pA = left_intersections[-1]
-        pB = (pA[0] + self.width, pA[1] - self.height / self.slope_top)
+        pB = (pA[0] + self.width, pA[1] - self.width / self.slope_top)
+
         p5 = (
             ds.right,
             pB[1] - (ds.right - pB[0]) / self.slope_bottom,
