@@ -214,34 +214,6 @@ You will now have a berm added to your original calculation
 
 ![Algorithm berm](img/algorithm_berm.png)
 
-#### Algorithm autoberm
-
-Design a berm based on given parameters. Let's see an example;
-
-```python
-ds = DStability.from_stix("tests/testdata/stix/real_sample_2.stix")
-alg = AlgorithmBermFromZ(
-    ds=ds,
-    soilcode="H_Rk_ko",
-    required_sf=1.0,
-    x_base=102.0,
-    angle=20,
-    initial_height=1.0,
-    slope_top=10,
-    slope_side=1,
-    step_size=0.25,
-)
-ds = alg.execute()
-```
-
-This will use a relatively simple method to iterate trough berm geometry options and will return a valid berm if the required safety factor has been reached. You need to set an intial x coordinate from which the berm should start
-and you can then assign an initial height, the berm slopes (top and side as V:H) the angle in which the berm will grow and the step size of the berm height. The next image shows to logic of the algorithm;
-
-![Algorithm autoberm](img/algorithm_autoberm_points.png)
-
-Note that it is off course possible that no valid geometry can be found. This will result in a exception with a message of the reason why the algorithm failed. 
-
-
 #### Algorithm excavation
 
 Add an excavation to the geometry. This will follow the surface. Here's some example code where we want to have an excavation at x coordinate 25m with a width of 4 meters and a depth of 1.5 meters;
@@ -325,6 +297,13 @@ You can see a result of this algorithm in the image from the Algorithm excavatio
 
 This algorithm is written for the waterboard Brabantse Delta to enable the creation of 
 fragility curves based on a varying river level. 
+
+TODO > uitbreiden beschrijving!
+
+#### Algorithm berm wsbd
+
+This algorithm is written for the waterboard Brabantse Delta to enable the creation of 
+automated berms. 
 
 TODO > uitbreiden beschrijving!
 
