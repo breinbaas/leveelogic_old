@@ -9,6 +9,7 @@ from typing import Dict, List, Tuple, Union, BinaryIO, Optional
 from dotenv import load_dotenv
 import os
 import subprocess
+from geolib.soils.soil import SoilWeightParameters, MohrCoulombParameters
 from geolib.geometry.one import Point
 from geolib.models.dstability.internal import (
     PersistableHeadLine,
@@ -87,17 +88,20 @@ class DStability(BaseModel):
                 Soil(
                     code=soil.code,
                     color="#FF" + soil.color[1:],
+                    soil_weight_parameters=SoilWeightParameters(
+                        saturated_weight=soil.y_sat, unsaturated_weight=soil.y_dry
+                    ),
+                    mohr_coulomb_parameters=MohrCoulombParameters(
+                        cohesion=soil.cohesion,
+                        dilatancy_angle=soil.cohesion,
+                        friction_angle=soil.friction_angle,
+                    ),
                 )
             )
 
-        # color: str
-        # y_dry: float
-        # y_sat: float
-        # cohesion: float
-        # friction_angle: float
-
         for spg in spgs:
             ds.model.add_layer(
+                label=spg.soilcode,
                 points=[Point(x=p[0], z=p[1]) for p in spg.points],
                 soil_code=spg.soilcode,
             )
