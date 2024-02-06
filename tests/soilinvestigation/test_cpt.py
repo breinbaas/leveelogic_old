@@ -1,5 +1,4 @@
 import pytest
-import numpy as np
 
 from leveelogic.soilinvestigation.cpt import Cpt, CptReadError, CptConversionMethod
 

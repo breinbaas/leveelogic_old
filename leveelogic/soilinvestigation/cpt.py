@@ -1038,7 +1038,8 @@ class Cpt(BaseModel):
         minimum_layerheight: float = DEFAULT_CPT_INTERPRETATION_MIN_LAYERHEIGHT,
         peat_friction_ratio: float = DEFAULT_CPT_INTERPRETATION_PEAT_FRICTION_RATIO,
         add_preexcavated_layer: bool = True,
-        width: float = 50.0,
+        left: float = 0.0,
+        right: float = 0.0,
     ) -> SoilProfile1:
         """Convert a Cpt to a 1D soilprofile
 
@@ -1051,7 +1052,7 @@ class Cpt(BaseModel):
         Returns:
             SoilProfile1: One dimension soilprofile
         """
-        soilprofile1 = SoilProfile1(left=0, right=width)
+        soilprofile1 = SoilProfile1(left=left, right=right)
         soilprofile1.lat = self.latlon[0]
         soilprofile1.lon = self.latlon[1]
 

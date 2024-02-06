@@ -7,6 +7,7 @@ from copy import deepcopy
 from ..geometry.soillayer import SoilLayer
 from ..models.datamodel import DataModel
 from ..soil.soilcollection import SoilCollection
+from .soilpolygon import SoilPolygon
 
 
 class SoilProfile1GapError(Exception):
@@ -32,9 +33,11 @@ class SoilProfile1(DataModel):
 
     lat: float = 0.0
     lon: float = 0.0
-    soillayers: List[
-        SoilLayer
-    ] = []  # TODO this is only valid for rectangles, should be polygons.. I think
+    left: float = 0.0
+    right: float = 0.0
+    soillayers: List[SoilLayer] = (
+        []
+    )  # TODO this is only valid for rectangles, should be polygons.. I think
 
     @property
     def top(self) -> float:
@@ -179,3 +182,15 @@ class SoilProfile1(DataModel):
         self.soillayers.append(
             SoilLayer(top=self.soillayers[-1].bottom, bottom=bottom, soilcode=soilcode)
         )
+
+    def to_soilpolygons(self) -> List[SoilPolygon]:
+        result = []
+        for layer in self.soillayers:
+            pts = [
+                (self.left, layer.top),
+                (self.right, layer.top),
+                (self.right, layer.bottom),
+                (self.left, layer.bottom),
+            ]
+            result.append(SoilPolygon(points=pts, soilcode=layer.soilcode))
+        return result

@@ -3,6 +3,8 @@ from typing import List, Dict
 from pathlib import Path
 
 from leveelogic.helpers import case_insensitive_glob
+from leveelogic.soilinvestigation.cpt import Cpt, CptConversionMethod
+from leveelogic.geometry.soilprofileN import SoilProfileN
 
 
 @pytest.fixture
@@ -89,3 +91,32 @@ def cpt_xml_strings() -> List[Dict]:
         p = Path(f).stem
         cpt_strings[p] = open(f, "r").read()
     return cpt_strings
+
+
+@pytest.fixture
+def cpt_soilprofileN() -> SoilProfileN:
+    cpt_left = Cpt.from_file("tests/testdata/cpts/01.gef")
+    cpt_right = Cpt.from_file("tests/testdata/cpts/02.gef")
+
+    spN = SoilProfileN()
+    spN.append(
+        cpt_left.to_soilprofile1(
+            cptconversionmethod=CptConversionMethod.ROBERTSON,
+            minimum_layerheight=0.5,
+            peat_friction_ratio=6.0,
+            left=0,
+            right=20,
+        )
+    )
+    spN.append(
+        cpt_right.to_soilprofile1(
+            cptconversionmethod=CptConversionMethod.ROBERTSON,
+            minimum_layerheight=0.5,
+            peat_friction_ratio=6.0,
+            left=20,
+            right=50,
+        ),
+        fill_material_bottom="bottom_material",
+        fill_material_top="top_material",
+    )
+    return spN

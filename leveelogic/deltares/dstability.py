@@ -18,12 +18,16 @@ from geolib.models.dstability.internal import (
     BishopBruteForceResult,
     SpencerGeneticAlgorithmResult,
     AnalysisTypeEnum,
+    Soil,
 )
 
 from leveelogic.geometry.characteristic_point import (
     CharacteristicPoint,
     CharacteristicPointType,
 )
+from ..soil.soilcollection import SoilCollection
+from ..geometry.soilprofileN import SoilProfileN
+from ..geometry.soilprofile1 import SoilProfile1
 from ..helpers import polyline_polyline_intersections
 
 load_dotenv()
@@ -51,6 +55,54 @@ class DStability(BaseModel):
     boundary: List[Tuple[float, float]] = []
     surface: List[Tuple[float, float]] = []
     waternet_settings: Dict = {}
+
+    @classmethod
+    def from_soilprofile1(
+        self,
+        soilprofile1: SoilProfile1,
+    ) -> "DStability":
+        pass
+
+    @classmethod
+    def from_soilprofileN(
+        self,
+        soilprofileN: SoilProfileN,
+        crosssection_points: List[Tuple[float, float]] = [],
+        fill_material_top="clay",
+        fill_material_bottom="sand",
+    ) -> "DStability":
+        ds = DStability()
+
+        soilcollection = soilprofileN.soilcollection
+        spgs = soilprofileN.to_soilpolygons(
+            crosssection_points=crosssection_points,
+            fill_material_top=fill_material_top,
+            fill_material_bottom=fill_material_bottom,
+        )
+
+        # create soils and remember ids
+        soil_ids = {}
+        for soil in soilcollection.soils:
+            soil_ids[soil.code] = ds.model.add_soil(
+                Soil(
+                    code=soil.code,
+                    color="#FF" + soil.color[1:],
+                )
+            )
+
+        # color: str
+        # y_dry: float
+        # y_sat: float
+        # cohesion: float
+        # friction_angle: float
+
+        for spg in spgs:
+            ds.model.add_layer(
+                points=[Point(x=p[0], z=p[1]) for p in spg.points],
+                soil_code=spg.soilcode,
+            )
+
+        return ds
 
     @classmethod
     def from_stix(cls, stix_file: str, auto_upgrade=True) -> "DStability":
@@ -511,24 +563,24 @@ class DStability(BaseModel):
                     == ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_ADVANCED
                 ):
                     d["model"] = "MOHR_COULOMB_ADVANCED"
-                    d[
-                        "c"
-                    ] = f"{soil.MohrCoulombAdvancedShearStrengthModel.Cohesion:.2f}"
-                    d[
-                        "phi"
-                    ] = f"{soil.MohrCoulombAdvancedShearStrengthModel.FrictionAngle:.2f}"
-                    d[
-                        "dilatancy"
-                    ] = f"{soil.MohrCoulombAdvancedShearStrengthModel.Dilatancy:.2f}"
+                    d["c"] = (
+                        f"{soil.MohrCoulombAdvancedShearStrengthModel.Cohesion:.2f}"
+                    )
+                    d["phi"] = (
+                        f"{soil.MohrCoulombAdvancedShearStrengthModel.FrictionAngle:.2f}"
+                    )
+                    d["dilatancy"] = (
+                        f"{soil.MohrCoulombAdvancedShearStrengthModel.Dilatancy:.2f}"
+                    )
                 elif (
                     ssma
                     == ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_CLASSIC
                 ):
                     d["model"] = "MOHR_COULOMB_CLASSIC"
                     d["c"] = f"{soil.MohrCoulombClassicShearStrengthModel.Cohesion:.2f}"
-                    d[
-                        "phi"
-                    ] = f"{soil.MohrCoulombClassicShearStrengthModel.FrictionAngle:.2f}"
+                    d["phi"] = (
+                        f"{soil.MohrCoulombClassicShearStrengthModel.FrictionAngle:.2f}"
+                    )
                 elif ssma == ShearStrengthModelTypePhreaticLevelInternal.NONE:
                     d["model"] = "NONE"
                 elif ssma == ShearStrengthModelTypePhreaticLevelInternal.SU:
