@@ -367,7 +367,9 @@ def polyline_polyline_intersections(
     ls2 = LineString(points_line2)
     intersections = ls1.intersection(ls2)
 
-    if type(intersections) == MultiPoint:
+    if intersections.is_empty:
+        final_result = []
+    elif type(intersections) == MultiPoint:
         result = [(g.x, g.y) for g in intersections.geoms]
     elif type(intersections) == Point:
         x, y = intersections.coords.xy
