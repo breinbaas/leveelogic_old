@@ -31,6 +31,7 @@ from ..geometry.soilprofileN import SoilProfileN
 from ..geometry.soilprofile1 import SoilProfile1
 from ..helpers import polyline_polyline_intersections
 from ..geometry.soilpolygon import SoilPolygon
+from ..soil.soil import Soil as LLSoil
 
 load_dotenv()
 DSTABILITY_MIGRATION_CONSOLE_PATH = os.getenv("DSTABILITY_MIGRATION_CONSOLE_PATH")
@@ -73,7 +74,6 @@ class DStability(BaseModel):
         fill_material_top="clay",
         fill_material_bottom="sand",
     ) -> "DStability":
-        ds = DStability()
 
         soilcollection = soilprofileN.soilcollection
         spgs = soilprofileN.to_soilpolygons(
@@ -82,9 +82,21 @@ class DStability(BaseModel):
             fill_material_bottom=fill_material_bottom,
         )
 
+        return DStability.from_soilpolygons(spgs, soilcollection)
+
+    @classmethod
+    def from_soilpolygons(
+        cls, soilpolygons: List[SoilPolygon], soilcollection: SoilCollection
+    ) -> "DStability":
+        ds = DStability()
+
         # create soils and remember ids
         soil_ids = {}
+        # TODO > de volgende lijn moet beter.. zou in de constructor moeten komen van de DStability class
+        soilcodes_in_ds = [s.Code for s in ds.model.soils.Soils]
         for soil in soilcollection.soils:
+            if soil.code in soilcodes_in_ds:
+                continue
             soil_ids[soil.code] = ds.model.add_soil(
                 Soil(
                     code=soil.code,
@@ -100,13 +112,12 @@ class DStability(BaseModel):
                 )
             )
 
-        for spg in spgs:
+        for spg in soilpolygons:
             ds.model.add_layer(
                 label=spg.soilcode,
                 points=[Point(x=p[0], z=p[1]) for p in spg.points],
                 soil_code=spg.soilcode,
             )
-
         return ds
 
     @classmethod
@@ -213,6 +224,23 @@ class DStability(BaseModel):
             SoilPolygon(points=sl["points"], soilcode=sl["soil"]["code"])
             for sl in self.soillayers
         ]
+
+    @property
+    def soilcollection(self) -> SoilCollection:
+        sc = SoilCollection()
+
+        for soil in self.soils:
+            sc.add(
+                LLSoil(
+                    code=soil["code"],
+                    color=soil["color"],
+                    y_dry=soil["yd"],
+                    y_sat=soil["ys"],
+                    cohesion=soil["cohesion"],
+                    friction_angle=soil["friction_angle"],
+                )
+            )
+        return sc
 
     def get_closest_point_from_x(self, x: float) -> Tuple[float, float]:
         """Get the closest point to the given x coordinate
@@ -422,7 +450,33 @@ class DStability(BaseModel):
                 "color": soilcolors[soil.Id],
                 "yd": soil.VolumetricWeightAbovePhreaticLevel,
                 "ys": soil.VolumetricWeightBelowPhreaticLevel,
+                "cohesion": 0.0,
+                "friction_angle": 0.0,
             }
+            if (
+                soil.ShearStrengthModelTypeAbovePhreaticLevel
+                == ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_CLASSIC
+                and soil.ShearStrengthModelTypeAbovePhreaticLevel
+                == soil.ShearStrengthModelTypeAbovePhreaticLevel
+            ):
+                self.soils[soil.Id][
+                    "cohesion"
+                ] = soil.MohrCoulombClassicShearStrengthModel.Cohesion
+                self.soils[soil.Id][
+                    "friction_angle"
+                ] = soil.MohrCoulombClassicShearStrengthModel.FrictionAngle
+            if (
+                soil.ShearStrengthModelTypeAbovePhreaticLevel
+                == ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_ADVANCED
+                and soil.ShearStrengthModelTypeAbovePhreaticLevel
+                == soil.ShearStrengthModelTypeAbovePhreaticLevel
+            ):
+                self.soils[soil.Id][
+                    "cohesion"
+                ] = soil.MohrCoulombAdvancedShearStrengthModel.Cohesion
+                self.soils[soil.Id][
+                    "friction_angle"
+                ] = soil.MohrCoulombAdvancedShearStrengthModel.FrictionAngle
 
         soillayers = {}
         for sl in self.model.datastructure.soillayers[0].SoilLayers:

@@ -1,0 +1,10 @@
+from leveelogic.deltares.algorithms.algorithm_cut import AlgorithmCut
+from leveelogic.deltares.dstability import DStability
+
+
+class TestAlgorithmCut:
+    def test_execute(self):
+        ds = DStability.from_stix("tests/testdata/stix/simple_geometry.stix")
+        alg = AlgorithmCut(ds=ds, points=[(0, 3), (13, 3), (25, -11), (55, -11)])
+        ds = alg.execute()
+        ds.serialize("tests/testdata/output/simple_geometry_cut.stix")
