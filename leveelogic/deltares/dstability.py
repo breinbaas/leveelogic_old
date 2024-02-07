@@ -22,7 +22,7 @@ from geolib.models.dstability.internal import (
     Soil,
 )
 
-from leveelogic.geometry.characteristic_point import (
+from ..geometry.characteristic_point import (
     CharacteristicPoint,
     CharacteristicPointType,
 )
@@ -30,6 +30,7 @@ from ..soil.soilcollection import SoilCollection
 from ..geometry.soilprofileN import SoilProfileN
 from ..geometry.soilprofile1 import SoilProfile1
 from ..helpers import polyline_polyline_intersections
+from ..geometry.soilpolygon import SoilPolygon
 
 load_dotenv()
 DSTABILITY_MIGRATION_CONSOLE_PATH = os.getenv("DSTABILITY_MIGRATION_CONSOLE_PATH")
@@ -205,6 +206,13 @@ class DStability(BaseModel):
             return [(p.X, p.Z) for p in self.phreatic_line.Points]
         else:
             return []
+
+    @property
+    def soilpolygons(self) -> List[SoilPolygon]:
+        return [
+            SoilPolygon(points=sl["points"], soilcode=sl["soil"]["code"])
+            for sl in self.soillayers
+        ]
 
     def get_closest_point_from_x(self, x: float) -> Tuple[float, float]:
         """Get the closest point to the given x coordinate
