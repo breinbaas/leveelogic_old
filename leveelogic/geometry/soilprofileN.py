@@ -1,8 +1,6 @@
 from typing import List, Tuple
 from copy import deepcopy
-from shapely.geometry import Polygon, LineString, MultiPolygon
-from shapely.geometry.polygon import orient
-from shapely.ops import unary_union
+from shapely.geometry import Polygon, MultiPolygon
 from matplotlib.pyplot import Figure
 from matplotlib.patches import Polygon as MPolygon
 

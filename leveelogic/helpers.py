@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List, Tuple
 from pyproj import Transformer
-from shapely.geometry import Polygon, MultiPolygon, Point, LineString, MultiPoint
+from shapely.geometry import Point, LineString, MultiPoint
 import re
 from matplotlib.pyplot import Figure
 from matplotlib.patches import Polygon as MPolygon

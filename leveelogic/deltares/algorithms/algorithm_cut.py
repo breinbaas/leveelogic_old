@@ -1,7 +1,6 @@
 from typing import List, Tuple
 from copy import deepcopy
-from geolib.geometry.one import Point
-from shapely.geometry import Polygon, LineString, MultiPolygon
+from shapely.geometry import Polygon,  MultiPolygon
 
 from .algorithm import Algorithm
 from ..dstability import DStability

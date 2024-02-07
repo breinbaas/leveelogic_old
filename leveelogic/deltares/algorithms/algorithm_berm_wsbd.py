@@ -7,7 +7,7 @@ from typing import List
 from ..dstability import DStability
 from .algorithm import Algorithm, AlgorithmInputCheckError
 from ...helpers import polyline_polyline_intersections
-from ...geometry.characteristic_point import CharacteristicPointType
+
 
 
 class AlgorithmBermWSBD(Algorithm):

@@ -1,5 +1,4 @@
 from copy import deepcopy
-from geolib.geometry import Point
 from typing import List, Tuple
 
 from ..dstability import DStability

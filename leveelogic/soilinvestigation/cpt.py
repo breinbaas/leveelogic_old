@@ -3,7 +3,6 @@ from typing import List, Optional, Union
 from pathlib import Path
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 from matplotlib.pyplot import Figure
