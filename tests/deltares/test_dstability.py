@@ -56,3 +56,8 @@ class TestDStability:
         ds = DStability.from_stix("tests/testdata/stix/fc_pl_sample.stix")
         hl_points = ds.get_headline_coordinates("Stijghoogtelijn 3 (PL3)")
         assert len(hl_points) == 26
+
+    def test_to_soilpolygons(self):
+        ds = DStability.from_stix("tests/testdata/stix/fc_pl_sample.stix")
+        spgs = ds.soilpolygons
+        assert len(spgs) == len(ds.model.datastructure.soillayers[0].SoilLayers)
