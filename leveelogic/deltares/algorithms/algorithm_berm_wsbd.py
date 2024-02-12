@@ -9,11 +9,10 @@ from .algorithm import Algorithm, AlgorithmInputCheckError
 from ...helpers import polyline_polyline_intersections
 
 
-
 class AlgorithmBermWSBD(Algorithm):
     soilcode: str = ""
-    slope_top: float
-    slope_bottom: float
+    slope_top: float = 10.0
+    slope_bottom: float = 1.0
     width: float = 0.0
     height: float = 0.0
 

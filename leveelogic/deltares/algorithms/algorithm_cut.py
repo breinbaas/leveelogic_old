@@ -1,6 +1,6 @@
 from typing import List, Tuple
 from copy import deepcopy
-from shapely.geometry import Polygon,  MultiPolygon
+from shapely.geometry import Polygon, MultiPolygon
 
 from .algorithm import Algorithm
 from ..dstability import DStability
@@ -53,4 +53,8 @@ class AlgorithmCut(Algorithm):
                 raise ValueError("Unhandled intersection type")
 
         # return the final result
-        return DStability.from_soilpolygons(final_soilpolygons, self.ds.soilcollection)
+        ds = DStability.from_soilpolygons(
+            final_soilpolygons,
+            self.ds.soilcollection,
+        )
+        return ds

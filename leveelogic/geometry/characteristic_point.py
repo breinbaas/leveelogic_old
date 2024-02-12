@@ -40,4 +40,4 @@ class CharacteristicPoint(DataModel):
 
     @property
     def is_valid(self) -> bool:
-        self.x != nan
+        return self.x != nan

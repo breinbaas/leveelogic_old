@@ -61,3 +61,8 @@ class TestDStability:
         ds = DStability.from_stix("tests/testdata/stix/fc_pl_sample.stix")
         spgs = ds.soilpolygons
         assert len(spgs) == len(ds.model.datastructure.soillayers[0].SoilLayers)
+
+    def test_soilprofile1_at(self):
+        ds = DStability.from_stix("tests/testdata/stix/fc_pl_sample.stix")
+        sp1 = ds.soilprofile1_at(x=256)
+        
