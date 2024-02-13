@@ -210,6 +210,10 @@ class DStability(BaseModel):
         return None
 
     @property
+    def has_phreatic_line(self):
+        return self.phreatic_line is not None
+
+    @property
     def phreatic_line_points(self) -> List[Tuple[float, float]]:
         """Get the points of the current phreatic line
 
@@ -461,13 +465,21 @@ class DStability(BaseModel):
         # TODO this is still far from ideal because it leave the old
         # pl line. That has no influence on the result but it looks bad
 
-        self.model.add_head_line(
-            [Point(x=p[0], z=p[1]) for p in points],
-            "Phreatic line",
-            is_phreatic_line=True,
-            scenario_index=self.current_scenario_index,
-            stage_index=self.current_stage_index,
-        )
+        # 1. check if we already have a phreatic line
+        if self.has_phreatic_line:
+            points = [PersistablePoint(X=p[0], Z=p[1]) for p in points]
+            for i, hl in enumerate(self.model.datastructure.waternets[0].HeadLines):
+                if hl.Id == self.model.datastructure.waternets[0].PhreaticLineId:
+                    self.model.datastructure.waternets[0].HeadLines[i].Points = points
+                    break
+        else:
+            self.model.add_head_line(
+                [Point(x=p[0], z=p[1]) for p in points],
+                "Phreatic line",
+                is_phreatic_line=True,
+                scenario_index=self.current_scenario_index,
+                stage_index=self.current_stage_index,
+            )
         self._post_process()
 
     def _post_process(self):
