@@ -1,5 +1,5 @@
 from enum import IntEnum
-from math import nan
+from math import isnan
 
 from ..models.datamodel import DataModel
 
@@ -40,4 +40,4 @@ class CharacteristicPoint(DataModel):
 
     @property
     def is_valid(self) -> bool:
-        return self.x != nan
+        return not isnan(self.x)

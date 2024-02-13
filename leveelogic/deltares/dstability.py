@@ -91,6 +91,7 @@ class DStability(BaseModel):
         cls,
         soilpolygons: List[SoilPolygon],
         soilcollection: SoilCollection,
+        old_ds: "DStability" = None,
     ) -> "DStability":
         ds = DStability()
 
@@ -490,10 +491,14 @@ class DStability(BaseModel):
         }
 
         for soil in self.model.soils.Soils:
+            if not soil.Id in soilcolors.keys():
+                color = "#54575c"
+            else:
+                color = soilcolors[soil.Id]
             self.soils[soil.Id] = {
                 "code": soil.Code,
                 "name": soil.Name,
-                "color": soilcolors[soil.Id],
+                "color": color,
                 "yd": soil.VolumetricWeightAbovePhreaticLevel,
                 "ys": soil.VolumetricWeightBelowPhreaticLevel,
                 "cohesion": 0.0,
