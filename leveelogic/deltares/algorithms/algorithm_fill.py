@@ -43,12 +43,14 @@ class AlgorithmFill(Algorithm):
         if intersections.is_empty:
             pass
         elif type(intersections) == Polygon:
-            new_soilpolygons.append(
-                SoilPolygon.from_shapely(intersections, self.soilcode)
-            )
+            if intersections.area > 0.01:                
+                new_soilpolygons.append(
+                    SoilPolygon.from_shapely(intersections, self.soilcode)
+                )
         elif type(intersections) == MultiPolygon:
             for geom in intersections.geoms:
-                new_soilpolygons.append(SoilPolygon.from_shapely(geom, self.soilcode))
+                if geom.area > 0.01:
+                    new_soilpolygons.append(SoilPolygon.from_shapely(geom, self.soilcode))
         else:
             t = type(intersections)
             raise ValueError("Unhandled intersection type")
