@@ -10,8 +10,6 @@ from ...geometry.soilpolygon import SoilPolygon
 class AlgorithmFill(Algorithm):
     """This algorithm will fill the surface of the current geometry until the given line
 
-    WARNING; You might lose information from the original calculation.
-
     Args:
         points (List[Tuple[float, float]]): list of points that form the lower boundary of the cut
         soilcode (str): soil code of the fill material

@@ -42,7 +42,7 @@ class AlgorithmBermWSBD(Algorithm):
 
             if isnan(self.embankement_toe_land_side):
                 raise AlgorithmInputCheckError(
-                    "The given stix file has no waternet creator settings where the embankement toe land side point is set which is required for this algorithm to run."
+                    "The given stix file has no waternet creator settings where the embankment toe land side point is set which is required for this algorithm to run."
                 )
 
         # Ditch information, maybe for later
