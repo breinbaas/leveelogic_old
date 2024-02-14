@@ -66,7 +66,7 @@ class TestAlgorithmBermWSBD:
         ds = DStability.from_stix("tests/testdata/stix/simple_geometry.stix")
         alg = AlgorithmBermWSBD(
             ds=ds,
-            soilcode="Embankment dry",
+            soilcode="Invalid soiltype",
             slope_top=10,
             slope_bottom=1,
             height=2.0,

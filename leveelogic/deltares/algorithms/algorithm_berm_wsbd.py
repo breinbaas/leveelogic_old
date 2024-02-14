@@ -89,8 +89,7 @@ class AlgorithmBermWSBD(Algorithm):
             fp_points = [fp1, fp2] + self.ds.surface_points_between(fp1[0], fp2[0])[
                 ::-1
             ]
-            fp_new_layer_points = [Point(x=p[0], z=p[1]) for p in fp_points]
-            ds.add_layer(fp_new_layer_points, self.ditch_soilcode, label="ditch fill")
+            ds.add_layer(fp_points, self.ditch_soilcode, label="ditch fill")
 
         # the algorithm could be used to only fill the ditch
         # in this case either the width or the height are zero
@@ -173,8 +172,6 @@ class AlgorithmBermWSBD(Algorithm):
             # now follow the surface back to p1
             points += ds.surface_points_between(p1[0], p2[0])[::-1]
 
-            # convert to deltares points
-            new_layer_points = [Point(x=p[0], z=p[1]) for p in points]
-            ds.add_layer(new_layer_points, self.soilcode)
+            ds.add_layer(points, self.soilcode)
 
         return ds

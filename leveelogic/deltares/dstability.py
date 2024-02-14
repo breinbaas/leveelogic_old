@@ -314,7 +314,7 @@ class DStability(BaseModel):
 
     def add_layer(
         self,
-        points: List[Point],
+        points: List[Tuple[float, float]],
         soil_code: str,
         label: str = "",
         notes: str = "",
@@ -322,7 +322,12 @@ class DStability(BaseModel):
         stage_index: Optional[int] = None,
     ) -> int:
         self.model.add_layer(
-            points, soil_code, label, notes, scenario_index, stage_index
+            [Point(x=p[0], z=p[1]) for p in points],
+            soil_code,
+            label,
+            notes,
+            scenario_index,
+            stage_index,
         )
         self._post_process()
 
