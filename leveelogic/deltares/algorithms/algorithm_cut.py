@@ -54,7 +54,6 @@ class AlgorithmCut(Algorithm):
 
         # return the final result
         ds = DStability.from_soilpolygons(
-            final_soilpolygons,
-            self.ds.soilcollection,
+            final_soilpolygons, self.ds.soilcollection, old_ds=self.ds
         )
         return ds

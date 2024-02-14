@@ -21,6 +21,7 @@ from geolib.models.dstability.internal import (
     AnalysisTypeEnum,
     Soil,
     SoilVisualisation,
+    WaternetCreatorSettings,
 )
 
 from ..geometry.characteristic_point import (
@@ -124,6 +125,12 @@ class DStability(BaseModel):
                 points=[Point(x=p[0], z=p[1]) for p in spg.points],
                 soil_code=spg.soilcode,
             )
+
+        if old_ds is not None:
+            ws = old_ds.model.datastructure.waternetcreatorsettings[0]
+            id = ds.model.datastructure.waternetcreatorsettings[0].Id
+            ds.model.datastructure.waternetcreatorsettings[0] = ws
+            ds.model.datastructure.waternetcreatorsettings[0].Id = id
 
         return ds
 
