@@ -16,6 +16,9 @@ class AlgorithmBermWSBD(Algorithm):
     width: float = 0.0
     height: float = 0.0
 
+    fixed_x: float = None
+    fixed_z: float = None
+
     fill_ditch: bool = False
     ditch_soilcode: str = None
 
@@ -26,14 +29,14 @@ class AlgorithmBermWSBD(Algorithm):
     ditch_land_side: float = nan
 
     def _check_input(self):
-        if self.width > 0 and self.height > 0:
-            # do we have this soilcode
+        # if we are using the algorithm to not only fill the ditch do we have this soilcode for the berm?
+        if self.width > 0 or self.fixed_x is not None:
             if not self.ds.has_soilcode(self.soilcode):
                 raise AlgorithmInputCheckError(
                     f"AlgorithmBermWSBD got an invalid soilcode '{self.soilcode}'"
                 )
 
-            # do we have the toe char points
+            # do we have the toe char point?
             self.embankement_toe_land_side = (
                 self.ds.model.datastructure.waternetcreatorsettings[
                     0
@@ -92,27 +95,43 @@ class AlgorithmBermWSBD(Algorithm):
             ds.add_layer(fp_points, self.ditch_soilcode, label="ditch fill")
 
         # the algorithm could be used to only fill the ditch
-        # in this case either the width or the height are zero
-        if self.width <= 0 or self.height <= 0:
+        # in this case the height width can be zero and the fixed coords not set
+        if self.fixed_x is None and self.width <= 0.0:
             return ds
 
-        # toe of the levee
         p1 = (
             self.embankement_toe_land_side,
             ds.z_at(self.embankement_toe_land_side)[0],
         )
-        # toe of the levee plus the initial height
-        p2 = (self.embankement_toe_land_side, p1[1] + self.height)
-        # left most points based on slope s1
-        p3 = (
-            ds.left,
-            p2[1] + (self.embankement_toe_land_side - ds.left) / self.slope_top,
-        )
-        #  rightmost point based on slope s1
-        p4 = (
-            ds.right,
-            p2[1] - (ds.right - self.embankement_toe_land_side) / self.slope_top,
-        )
+        if self.fixed_x is not None and self.fixed_z is not None:
+            # the topright point of the berm is defined so now find out the intersections based on the slopes
+            p3 = (
+                ds.left,
+                self.fixed_z + (self.fixed_x - ds.left) / self.slope_top,
+            )
+            p4 = (
+                ds.right,
+                self.fixed_z
+                - (ds.right - self.embankement_toe_land_side) / self.slope_top,
+            )
+        elif self.width > 0 and self.height > 0:
+            # toe of the levee
+
+            # toe of the levee plus the initial height
+            p2 = (self.embankement_toe_land_side, p1[1] + self.height)
+            # left most points based on slope s1
+            p3 = (
+                ds.left,
+                p2[1] + (self.embankement_toe_land_side - ds.left) / self.slope_top,
+            )
+            #  rightmost point based on slope s1
+            p4 = (
+                ds.right,
+                p2[1] - (ds.right - self.embankement_toe_land_side) / self.slope_top,
+            )
+
+        else:
+            raise ValueError("No valid berm option given")
 
         # get all intersections with the top of the berm
         intersections = polyline_polyline_intersections([p3, p4], ds.surface)
@@ -126,8 +145,11 @@ class AlgorithmBermWSBD(Algorithm):
             )
         # FIRST POINT OF BERM -> start of berm (left side)
         pA = left_intersections[-1]
-        pB = (pA[0] + self.width, pA[1] - self.width / self.slope_top)
 
+        if self.fixed_x is not None:
+            pB = (self.fixed_x, self.fixed_z)
+        else:
+            pB = (pA[0] + self.width, pA[1] - self.width / self.slope_top)
         p5 = (
             ds.right,
             pB[1] - (ds.right - pB[0]) / self.slope_bottom,
