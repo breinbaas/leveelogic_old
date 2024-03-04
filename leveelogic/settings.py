@@ -1,5 +1,3 @@
-from .geometry.characteristic_point import CharacteristicPointType
-
 DEFAULT_CPT_INTERPRETATION_MIN_LAYERHEIGHT = 0.1
 DEFAULT_CPT_INTERPRETATION_PEAT_FRICTION_RATIO = 1e9
 

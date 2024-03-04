@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List
 import abc
 from ..dstability import DStability
 
@@ -29,7 +29,10 @@ class Algorithm(BaseModel, metaclass=abc.ABCMeta):
                 f"Could not execute algorithm, got error '{e}'"
             )
 
-        return self._execute()
+        ds = self._execute()
+        ds._post_process()
+
+        return ds
 
     def execute_multiple_results(self) -> List[DStability]:
         try:

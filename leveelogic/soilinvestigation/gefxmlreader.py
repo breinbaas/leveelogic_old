@@ -12,15 +12,11 @@ __status__ = "Dev"
 
 from dataclasses import dataclass
 from typing import OrderedDict
-from xml.dom.minidom import Element
 import pandas as pd
 from io import StringIO
 import numpy as np
 import re
-from matplotlib.gridspec import GridSpec
-import matplotlib.pyplot as plt
-from datetime import date, datetime
-from pyproj import Transformer
+from datetime import datetime
 import xml.etree.ElementTree as ET
 
 

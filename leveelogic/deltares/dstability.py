@@ -2,13 +2,14 @@ from pydantic import BaseModel, DirectoryPath, FilePath
 import geolib as gl
 from enum import IntEnum
 from pathlib import Path
-from shapely.geometry import Polygon, LineString
+from shapely.geometry import Polygon
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 from typing import Dict, List, Tuple, Union, BinaryIO, Optional
 from dotenv import load_dotenv
 import os
 import subprocess
+from geolib.soils.soil import SoilWeightParameters, MohrCoulombParameters
 from geolib.geometry.one import Point
 from geolib.models.dstability.internal import (
     PersistableHeadLine,
@@ -18,13 +19,22 @@ from geolib.models.dstability.internal import (
     BishopBruteForceResult,
     SpencerGeneticAlgorithmResult,
     AnalysisTypeEnum,
+    Soil,
+    SoilVisualisation,
+    WaternetCreatorSettings,
 )
 
-from leveelogic.geometry.characteristic_point import (
+from ..geometry.characteristic_point import (
     CharacteristicPoint,
     CharacteristicPointType,
 )
+from ..soil.soilcollection import SoilCollection
+from ..geometry.soilprofileN import SoilProfileN
+from ..geometry.soilprofile1 import SoilProfile1
 from ..helpers import polyline_polyline_intersections
+from ..geometry.soilpolygon import SoilPolygon
+from ..geometry.soillayer import SoilLayer
+from ..soil.soil import Soil as LLSoil
 
 load_dotenv()
 DSTABILITY_MIGRATION_CONSOLE_PATH = os.getenv("DSTABILITY_MIGRATION_CONSOLE_PATH")
@@ -51,6 +61,78 @@ class DStability(BaseModel):
     boundary: List[Tuple[float, float]] = []
     surface: List[Tuple[float, float]] = []
     waternet_settings: Dict = {}
+
+    @classmethod
+    def from_soilprofile1(
+        self,
+        soilprofile1: SoilProfile1,
+    ) -> "DStability":
+        pass
+
+    @classmethod
+    def from_soilprofileN(
+        self,
+        soilprofileN: SoilProfileN,
+        crosssection_points: List[Tuple[float, float]] = [],
+        fill_material_top="clay",
+        fill_material_bottom="sand",
+    ) -> "DStability":
+
+        soilcollection = soilprofileN.soilcollection
+        spgs = soilprofileN.to_soilpolygons(
+            crosssection_points=crosssection_points,
+            fill_material_top=fill_material_top,
+            fill_material_bottom=fill_material_bottom,
+        )
+
+        return DStability.from_soilpolygons(spgs, soilcollection)
+
+    @classmethod
+    def from_soilpolygons(
+        cls,
+        soilpolygons: List[SoilPolygon],
+        soilcollection: SoilCollection,
+        old_ds: "DStability" = None,
+    ) -> "DStability":
+        ds = DStability()
+
+        # create soils and remember ids
+        soil_ids = {}
+        # TODO > de volgende lijn moet beter.. zou in de constructor moeten komen van de DStability class
+        soilcodes_in_ds = [s.Code for s in ds.model.soils.Soils]
+        for soil in soilcollection.soils:
+            if soil.code in soilcodes_in_ds:
+                continue
+            soil_id = ds.model.add_soil(
+                Soil(
+                    code=soil.code,
+                    color="#FF" + soil.color[1:],
+                    soil_weight_parameters=SoilWeightParameters(
+                        saturated_weight=soil.y_sat, unsaturated_weight=soil.y_dry
+                    ),
+                    mohr_coulomb_parameters=MohrCoulombParameters(
+                        cohesion=soil.cohesion,
+                        dilatancy_angle=soil.cohesion,
+                        friction_angle=soil.friction_angle,
+                    ),
+                )
+            )
+            soil_ids[soil.code] = soil_id
+
+        for spg in soilpolygons:
+            ds.model.add_layer(
+                label=spg.soilcode,
+                points=[Point(x=p[0], z=p[1]) for p in spg.points],
+                soil_code=spg.soilcode,
+            )
+
+        if old_ds is not None:
+            ws = old_ds.model.datastructure.waternetcreatorsettings[0]
+            id = ds.model.datastructure.waternetcreatorsettings[0].Id
+            ds.model.datastructure.waternetcreatorsettings[0] = ws
+            ds.model.datastructure.waternetcreatorsettings[0].Id = id
+
+        return ds
 
     @classmethod
     def from_stix(cls, stix_file: str, auto_upgrade=True) -> "DStability":
@@ -135,6 +217,10 @@ class DStability(BaseModel):
         return None
 
     @property
+    def has_phreatic_line(self):
+        return self.phreatic_line is not None
+
+    @property
     def phreatic_line_points(self) -> List[Tuple[float, float]]:
         """Get the points of the current phreatic line
 
@@ -149,6 +235,70 @@ class DStability(BaseModel):
             return [(p.X, p.Z) for p in self.phreatic_line.Points]
         else:
             return []
+
+    @property
+    def soilpolygons(self) -> List[SoilPolygon]:
+        return [
+            SoilPolygon(points=sl["points"], soilcode=sl["soil"]["code"])
+            for sl in self.soillayers
+        ]
+
+    @property
+    def soilcollection(self) -> SoilCollection:
+        sc = SoilCollection()
+
+        for soil in self.soils:
+            sc.add(
+                LLSoil(
+                    code=soil["code"],
+                    color=soil["color"],
+                    y_dry=soil["yd"],
+                    y_sat=soil["ys"],
+                    cohesion=soil["cohesion"],
+                    friction_angle=soil["friction_angle"],
+                )
+            )
+        return sc
+
+    @property
+    def ditch_points(self) -> List[Tuple[float, float]]:
+        """Get the ditch points from left (riverside) to right (landside), this will return
+        the ditch embankement side, ditch embankement side bottom, land side bottom, land side
+        or empty list if there are not ditch points
+
+        Returns:
+            List[Tuple[float, float]]: List of points or empty list if no ditch is found
+        """
+
+        p1 = self.get_characteristic_point(
+            CharacteristicPointType.DITCH_EMBANKEMENT_SIDE
+        )
+        p2 = self.get_characteristic_point(
+            CharacteristicPointType.DITCH_BOTTOM_EMBANKEMENT_SIDE
+        )
+        p3 = self.get_characteristic_point(
+            CharacteristicPointType.DITCH_BOTTOM_LAND_SIDE
+        )
+        p4 = self.get_characteristic_point(CharacteristicPointType.DITCH_LAND_SIDE)
+
+        if p1.is_valid and p2.is_valid and p3.is_valid and p4.is_valid:
+            return [
+                (p1.x, self.z_at(p1.x)),
+                (p2.x, self.z_at(p1.x)),
+                (p3.x, self.z_at(p1.x)),
+                (p4.x, self.z_at(p1.x)),
+            ]
+        else:
+            return []
+
+    @property
+    def has_ditch(self) -> bool:
+        """Returns if the model has assigned ditch points
+
+        Returns:
+            bool: True if there is a ditch, False otherwise
+        """
+        return len(self.ditch_points) == 4
 
     def get_closest_point_from_x(self, x: float) -> Tuple[float, float]:
         """Get the closest point to the given x coordinate
@@ -171,7 +321,7 @@ class DStability(BaseModel):
 
     def add_layer(
         self,
-        points: List[Point],
+        points: List[Tuple[float, float]],
         soil_code: str,
         label: str = "",
         notes: str = "",
@@ -179,7 +329,12 @@ class DStability(BaseModel):
         stage_index: Optional[int] = None,
     ) -> int:
         self.model.add_layer(
-            points, soil_code, label, notes, scenario_index, stage_index
+            [Point(x=p[0], z=p[1]) for p in points],
+            soil_code,
+            label,
+            notes,
+            scenario_index,
+            stage_index,
         )
         self._post_process()
 
@@ -322,13 +477,21 @@ class DStability(BaseModel):
         # TODO this is still far from ideal because it leave the old
         # pl line. That has no influence on the result but it looks bad
 
-        self.model.add_head_line(
-            [Point(x=p[0], z=p[1]) for p in points],
-            "Phreatic line",
-            is_phreatic_line=True,
-            scenario_index=self.current_scenario_index,
-            stage_index=self.current_stage_index,
-        )
+        # 1. check if we already have a phreatic line
+        if self.has_phreatic_line:
+            points = [PersistablePoint(X=p[0], Z=p[1]) for p in points]
+            for i, hl in enumerate(self.model.datastructure.waternets[0].HeadLines):
+                if hl.Id == self.model.datastructure.waternets[0].PhreaticLineId:
+                    self.model.datastructure.waternets[0].HeadLines[i].Points = points
+                    break
+        else:
+            self.model.add_head_line(
+                [Point(x=p[0], z=p[1]) for p in points],
+                "Phreatic line",
+                is_phreatic_line=True,
+                scenario_index=self.current_scenario_index,
+                stage_index=self.current_stage_index,
+            )
         self._post_process()
 
     def _post_process(self):
@@ -352,13 +515,43 @@ class DStability(BaseModel):
         }
 
         for soil in self.model.soils.Soils:
+            if not soil.Id in soilcolors.keys():
+                color = "#54575c"
+            else:
+                color = soilcolors[soil.Id]
             self.soils[soil.Id] = {
                 "code": soil.Code,
                 "name": soil.Name,
-                "color": soilcolors[soil.Id],
+                "color": color,
                 "yd": soil.VolumetricWeightAbovePhreaticLevel,
                 "ys": soil.VolumetricWeightBelowPhreaticLevel,
+                "cohesion": 0.0,
+                "friction_angle": 0.0,
             }
+            if (
+                soil.ShearStrengthModelTypeAbovePhreaticLevel
+                == ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_CLASSIC
+                and soil.ShearStrengthModelTypeAbovePhreaticLevel
+                == soil.ShearStrengthModelTypeAbovePhreaticLevel
+            ):
+                self.soils[soil.Id][
+                    "cohesion"
+                ] = soil.MohrCoulombClassicShearStrengthModel.Cohesion
+                self.soils[soil.Id][
+                    "friction_angle"
+                ] = soil.MohrCoulombClassicShearStrengthModel.FrictionAngle
+            if (
+                soil.ShearStrengthModelTypeAbovePhreaticLevel
+                == ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_ADVANCED
+                and soil.ShearStrengthModelTypeAbovePhreaticLevel
+                == soil.ShearStrengthModelTypeAbovePhreaticLevel
+            ):
+                self.soils[soil.Id][
+                    "cohesion"
+                ] = soil.MohrCoulombAdvancedShearStrengthModel.Cohesion
+                self.soils[soil.Id][
+                    "friction_angle"
+                ] = soil.MohrCoulombAdvancedShearStrengthModel.FrictionAngle
 
         soillayers = {}
         for sl in self.model.datastructure.soillayers[0].SoilLayers:
@@ -371,6 +564,7 @@ class DStability(BaseModel):
                 {
                     "points": [(p.X, p.Z) for p in layer.Points],
                     "soil": self.soils[soillayers[layer.Id]],
+                    "layer_id": layer.Id,
                 }
             )
 
@@ -419,6 +613,12 @@ class DStability(BaseModel):
                 }
             )
 
+    def get_soil_from_layer_id(self, layer_id: str):
+        for sl in self.soillayers:
+            if sl["layer_id"] == layer_id:
+                return sl["soil"]
+        return None
+
     def surface_intersections(
         self, polyline: List[Tuple[float, float]]
     ) -> List[Tuple[float, float]]:
@@ -460,6 +660,70 @@ class DStability(BaseModel):
                 f"Trying to set an invalid stage index for scenario {self.current_scenario_index}"
             )
 
+    def soilprofile1_at(
+        self, x: float, scenario_index: int = 0, stage_index: int = 0
+    ) -> SoilProfile1:
+        """Generate a SoilProfile1 at the given x coordinate
+
+        Args:
+            x (float): the location to create the SoilProfile1
+            scenario_index (int, optional): _description_. Defaults to 0.
+            stage_index (int, optional): _description_. Defaults to 0.
+
+        Returns:
+            SoilProfile1: The soilprofile1, the bottom layer will always end at -999.0
+        """
+        result = SoilProfile1()
+
+        layers = self.model._get_geometry(scenario_index, stage_index).Layers
+
+        soillayers = []
+
+        for layer in layers:
+            points = layer.Points + [layer.Points[0]]
+            for i in range(1, len(points)):
+                p1 = points[i - 1]
+                if i == len(points):
+                    p2 = points[0]
+                else:
+                    p2 = points[i]
+
+                if min(p1.X, p2.X) <= x and x <= max(p1.X, p2.X):
+                    soil = self.get_soil_from_layer_id(layer.Id)
+                    if p1.X == p2.X:
+                        z = round(p1.Z, 3)
+                    else:
+                        z = round(p1.Z + (x - p1.X) / (p2.X - p1.X) * (p2.Z - p1.Z), 3)
+                    soillayers.append((z, soil))
+
+        soillayers = sorted(soillayers, key=lambda x: x[0], reverse=True)
+        if soillayers[0] == soillayers[1]:
+            soillayers = soillayers[1:]
+        result = SoilProfile1(
+            soillayers=[
+                SoilLayer(
+                    top=soillayers[0][0], bottom=0.0, soilcode=soillayers[0][1]["code"]
+                )
+            ]
+        )
+
+        for i in range(1, int(len(soillayers) / 2)):
+            option1 = soillayers[i * 2 - 1]
+            option2 = soillayers[i * 2]
+
+            if option1[1]["code"] == result.soillayers[-1].soilcode:
+                result.soillayers[-1].bottom = option1[0]
+                add_layer = option2
+            else:
+                result.soillayers[-1].bottom = option2[0]
+                add_layer = option1
+
+            result.soillayers.append(
+                SoilLayer(top=add_layer[0], bottom=0.0, soilcode=add_layer[1]["code"])
+            )
+        result.soillayers[-1].bottom = -999.0
+        return result
+
     def z_at(self, x, scenario_index: int = 0, stage_index: int = 0) -> List[float]:
         """Get a list of z coordinates from intersections with the soillayers on coordinate x
 
@@ -471,27 +735,8 @@ class DStability(BaseModel):
         Returns:
             List[float]: A list of intersections sorted from high to low
         """
-        layers = self.model._get_geometry(scenario_index, stage_index).Layers
-        result, zs = [], []
-        for layer in layers:
-            for i in range(1, len(layer.Points)):
-                p1 = layer.Points[i - 1]
-                if i == len(layer.Points):
-                    p2 = layer.Points[0]
-                else:
-                    p2 = layer.Points[i]
-
-                if min(p1.X, p2.X) <= x and x <= max(p1.X, p2.X):
-                    if p1.X == p2.X:
-                        zs.append(p1.Z)
-                    else:
-                        zs.append(p1.Z + (x - p1.X) / (p2.X - p1.X) * (p2.Z - p1.Z))
-
-        for r in [round(f, 3) for f in zs]:
-            if not r in result:
-                result.append(r)
-
-        return sorted(result, reverse=True)
+        sp1 = self.soilprofile1_at(x, scenario_index, stage_index)
+        return [sl.top for sl in sp1.soillayers]
 
     def has_soilcode(self, soilcode: str) -> bool:
         """Check if the current model has the given soilcode

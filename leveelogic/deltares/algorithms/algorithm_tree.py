@@ -1,4 +1,3 @@
-from typing import List, Tuple
 from copy import deepcopy
 from geolib.models.dstability.loads import TreeLoad, LineLoad
 from geolib.geometry.one import Point

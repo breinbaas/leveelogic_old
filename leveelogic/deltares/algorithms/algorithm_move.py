@@ -1,11 +1,8 @@
 from copy import deepcopy
-from geolib.geometry import Point
-from typing import List, Tuple
 
 from ..dstability import DStability
 from .algorithm import Algorithm
 from ...helpers import polyline_polyline_intersections
-from ...geometry.characteristic_point import CharacteristicPointType
 
 
 class AlgorithmMove(Algorithm):

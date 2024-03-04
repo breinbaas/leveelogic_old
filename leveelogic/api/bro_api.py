@@ -8,6 +8,7 @@ from typing import List
 from .bro_objects import CPTCharacteristics, Envelope, Point
 from ..soilinvestigation.cpt import Cpt, CptReadError
 from ..settings import BRO_CPT_DOWNLOAD_URL, BRO_CPT_CHARACTERISTICS_URL
+from ..helpers import xy_to_latlon
 
 
 class BROAPI(BaseModel):
@@ -89,7 +90,7 @@ class BROAPI(BaseModel):
                 f"Error reading cpt file from url '{URL}', got error '{e}' "
             )
 
-    def get_cpts_by_bounds(
+    def get_cpts_by_bounds_latlon(
         self,
         left: float,
         right: float,
@@ -114,3 +115,75 @@ class BROAPI(BaseModel):
             cpts.append(cpt)
 
         return cpt_strings, cpts
+
+    def get_cpts_meta_data_by_bounds_latlon(
+        self,
+        left: float,
+        right: float,
+        top: float,
+        bottom: float,
+        exclude_bro_ids: List[str] = [],
+        max_num: int = -1,
+    ):
+        cpt_characteristics = self._get_cpt_metadata_by_bounds(
+            left=left,
+            top=top,
+            right=right,
+            bottom=bottom,
+            exclude_bro_ids=exclude_bro_ids,
+            max_num=max_num,
+        )
+
+        return cpt_characteristics
+
+    def get_cpts_by_bounds_rd(
+        self,
+        left: float,
+        right: float,
+        top: float,
+        bottom: float,
+        exclude_bro_ids: List[str] = [],
+        max_num: int = -1,
+    ):
+        lat1, lon1 = xy_to_latlon(left, bottom)
+        lat2, lon2 = xy_to_latlon(right, top)
+
+        cpt_characteristics = self._get_cpt_metadata_by_bounds(
+            left=lat1,
+            top=lon2,
+            right=lat2,
+            bottom=lon1,
+            exclude_bro_ids=exclude_bro_ids,
+            max_num=max_num,
+        )
+
+        cpt_strings, cpts = [], []
+        for cpt_c in cpt_characteristics:
+            cpt_string, cpt = self._get_cpt_from_bro_id(cpt_c.bro_id)
+            cpt_strings.append(cpt_string)
+            cpts.append(cpt)
+
+        return cpt_strings, cpts
+
+    def get_cpts_meta_data_by_bounds_rd(
+        self,
+        left: float,
+        right: float,
+        top: float,
+        bottom: float,
+        exclude_bro_ids: List[str] = [],
+        max_num: int = -1,
+    ):
+        lat1, lon1 = xy_to_latlon(left, bottom)
+        lat2, lon2 = xy_to_latlon(right, top)
+
+        cpt_characteristics = self._get_cpt_metadata_by_bounds(
+            left=lat1,
+            top=lon2,
+            right=lat2,
+            bottom=lon1,
+            exclude_bro_ids=exclude_bro_ids,
+            max_num=max_num,
+        )
+
+        return cpt_characteristics

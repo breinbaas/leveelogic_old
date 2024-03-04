@@ -66,7 +66,7 @@ class TestAlgorithmBermWSBD:
         ds = DStability.from_stix("tests/testdata/stix/simple_geometry.stix")
         alg = AlgorithmBermWSBD(
             ds=ds,
-            soilcode="Embankment dry",
+            soilcode="Invalid soiltype",
             slope_top=10,
             slope_bottom=1,
             height=2.0,
@@ -74,3 +74,17 @@ class TestAlgorithmBermWSBD:
         )
         with pytest.raises(AlgorithmInputCheckError):
             ds = alg.execute()
+
+    def test_execute_spikey_geometry_fixed_xz(self):
+        ds = DStability.from_stix("tests/testdata/stix/spikey_geometry.stix")
+
+        alg = AlgorithmBermWSBD(
+            ds=ds,
+            soilcode="Embankment dry",
+            slope_top=10,
+            slope_bottom=2,
+            fixed_x=45,
+            fixed_z=14,
+        )
+        ds = alg.execute()
+        ds.serialize(f"tests/testdata/output/spikey_geometry_berm_fixed_xz.stix")

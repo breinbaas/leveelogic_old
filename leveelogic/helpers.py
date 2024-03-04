@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import List, Tuple
 from pyproj import Transformer
-from shapely.geometry import Polygon, MultiPolygon, Point, LineString, MultiPoint
+from shapely.geometry import Point, LineString, MultiPoint
 import re
+from matplotlib.pyplot import Figure
+from matplotlib.patches import Polygon as MPolygon
 
 from .settings import (
     nen5104_sand_dict,
@@ -384,3 +386,38 @@ def polyline_polyline_intersections(
         return []
 
     return sorted(final_result, key=lambda x: x[0])
+
+
+def plot_soilpolygons(
+    spg,
+    soilcollection,
+    size_x: float = 10,
+    size_y: float = 6,
+):
+    fig = Figure(figsize=(size_x, size_y))
+    ax = fig.add_subplot()
+
+    xs, ys = [], []
+
+    for sp in spg:
+        xs += [p[0] for p in sp.points]
+        ys += [p[1] for p in sp.points]
+        try:
+            color = soilcollection.get(sp.soilcode).color
+        except Exception as e:
+            raise ValueError(
+                f"Could not find a soil definition for soil code '{sp.soilcode}'"
+            )
+
+        pg = MPolygon(
+            sp.points,
+            color=color,
+            alpha=0.7,
+        )
+        ax.add_patch(pg)
+        # ax.text(sp.left, soillayer.bottom, soillayer.soilcode)
+
+    ax.set_xlim(min(xs), max(xs))
+    ax.set_ylim(min(ys), max(ys))
+
+    return fig
