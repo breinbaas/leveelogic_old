@@ -116,6 +116,26 @@ class BROAPI(BaseModel):
 
         return cpt_strings, cpts
 
+    def get_cpts_meta_data_by_bounds_latlon(
+        self,
+        left: float,
+        right: float,
+        top: float,
+        bottom: float,
+        exclude_bro_ids: List[str] = [],
+        max_num: int = -1,
+    ):
+        cpt_characteristics = self._get_cpt_metadata_by_bounds(
+            left=left,
+            top=top,
+            right=right,
+            bottom=bottom,
+            exclude_bro_ids=exclude_bro_ids,
+            max_num=max_num,
+        )
+
+        return cpt_characteristics
+
     def get_cpts_by_bounds_rd(
         self,
         left: float,
@@ -144,3 +164,26 @@ class BROAPI(BaseModel):
             cpts.append(cpt)
 
         return cpt_strings, cpts
+
+    def get_cpts_meta_data_by_bounds_rd(
+        self,
+        left: float,
+        right: float,
+        top: float,
+        bottom: float,
+        exclude_bro_ids: List[str] = [],
+        max_num: int = -1,
+    ):
+        lat1, lon1 = xy_to_latlon(left, bottom)
+        lat2, lon2 = xy_to_latlon(right, top)
+
+        cpt_characteristics = self._get_cpt_metadata_by_bounds(
+            left=lat1,
+            top=lon2,
+            right=lat2,
+            bottom=lon1,
+            exclude_bro_ids=exclude_bro_ids,
+            max_num=max_num,
+        )
+
+        return cpt_characteristics
