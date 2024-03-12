@@ -5,7 +5,7 @@ This module handles the three types of state types in DStability.
 import abc
 from typing import List, Tuple
 
-from geolib.models import BaseDataClass
+from ...models import BaseDataClass
 
 from ...geometry.one import Point
 from ...utils import snake_to_camel

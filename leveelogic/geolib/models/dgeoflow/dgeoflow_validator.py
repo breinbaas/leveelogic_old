@@ -1,7 +1,7 @@
 import logging
 from typing import Set
 
-from geolib.models.validators import BaseValidator
+from ...models.validators import BaseValidator
 
 logger = logging.getLogger(__name__)
 

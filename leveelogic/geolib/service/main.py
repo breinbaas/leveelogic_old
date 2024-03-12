@@ -11,8 +11,8 @@ from pydantic import ValidationError, conlist
 from starlette import status
 from starlette.responses import JSONResponse
 
-from geolib.errors import CalculationError
-from geolib.models import (
+from ..errors import CalculationError
+from ..models import (
     BaseModel,
     BaseModelList,
     DFoundationsModel,
@@ -20,7 +20,7 @@ from geolib.models import (
     DSheetPilingModel,
     DStabilityModel,
 )
-from geolib.models.meta import MetaData
+from ..models.meta import MetaData
 
 # Fixes for custom serialization
 pydantic.json.ENCODERS_BY_TYPE[Path] = str
@@ -33,8 +33,12 @@ security = HTTPBasic()
 
 
 def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = secrets.compare_digest(credentials.username, settings.gl_username)
-    correct_password = secrets.compare_digest(credentials.password, settings.gl_password)
+    correct_username = secrets.compare_digest(
+        credentials.username, settings.gl_username
+    )
+    correct_password = secrets.compare_digest(
+        credentials.password, settings.gl_password
+    )
     if not (correct_username and correct_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

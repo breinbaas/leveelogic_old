@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Type, Union
 
 from pydantic import PositiveInt, confloat
 
-from geolib.models import BaseDataClass
+from ...models import BaseDataClass
 
 from ...geometry.one import Point
 from ...utils import snake_to_camel
@@ -61,7 +61,8 @@ class DStabilityCircle(DStabilityObject):
 
     def _to_internal_datastructure(self) -> PersistableCircle:
         return PersistableCircle(
-            Center=PersistablePoint(X=self.center.x, Z=self.center.z), Radius=self.radius
+            Center=PersistablePoint(X=self.center.x, Z=self.center.z),
+            Radius=self.radius,
         )
 
 
@@ -169,7 +170,9 @@ class DStabilityBishopAnalysisMethod(DStabilityAnalysisMethod):
     circle: DStabilityCircle
 
     def _to_internal_datastructure(self) -> PersistableBishopSettings:
-        return PersistableBishopSettings(Circle=self.circle._to_internal_datastructure())
+        return PersistableBishopSettings(
+            Circle=self.circle._to_internal_datastructure()
+        )
 
 
 class DStabilityBishopBruteForceAnalysisMethod(DStabilityAnalysisMethod):

@@ -8,9 +8,9 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from pydantic import DirectoryPath, FilePath
 from zipp import Path
 
-from geolib.errors import NotConcreteError
-from geolib.models.serializers import BaseSerializer
-from geolib.models.utils import get_filtered_type_hints
+from ...errors import NotConcreteError
+from ...models.serializers import BaseSerializer
+from ...models.utils import get_filtered_type_hints
 
 from .internal import DGeoFlowStructure
 

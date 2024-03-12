@@ -10,13 +10,14 @@ such as an compute endpoint.
     Make a mapping between the possible metadata options and names for each model.
 
 """
+
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from pydantic import AnyHttpUrl, BaseSettings, DirectoryPath
 
-from geolib import __version__ as version
+from ...geolib import __version__ as version
 
 CONSOLE_RUN_BATCH_FLAG = "/b"
 
@@ -50,7 +51,7 @@ class MetaData(BaseSettings):
     dsheetpiling_console_path: Optional[Path] = None
     dsettlement_console_path: Optional[Path] = None
     dfoundations_console_path: Optional[Path] = None
-    
+
     timeout: int = 10 * 60  # in seconds, so 10 minutes
 
     # For multiple calculations

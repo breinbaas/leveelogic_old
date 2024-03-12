@@ -21,9 +21,9 @@ from typing import (
 
 from pydantic import FilePath
 
-from geolib.errors import ParserError
-from geolib.models import BaseDataClass as DataClass
-from geolib.models.base_model_structure import BaseModelStructure
+from ..errors import ParserError
+from ..models import BaseDataClass as DataClass
+from ..models.base_model_structure import BaseModelStructure
 
 from .parsers import BaseParser
 from .utils import (
@@ -511,7 +511,9 @@ class DSeriesInlineProperties(DSeriesStructure):
         return 0
 
     @classmethod
-    def get_property_key_value(cls, text: str, expected_property: str) -> Tuple[str, str]:
+    def get_property_key_value(
+        cls, text: str, expected_property: str
+    ) -> Tuple[str, str]:
         """Gets the property key and value for a given text line.
         It allows concrete classes to override it and either use the expected property
         name or another value.
@@ -601,7 +603,9 @@ class DSeriesInlineMappedProperties(DSeriesInlineProperties):
     """
 
     @classmethod
-    def get_property_key_value(cls, text: str, expected_property: str) -> Tuple[str, str]:
+    def get_property_key_value(
+        cls, text: str, expected_property: str
+    ) -> Tuple[str, str]:
         """Gets both property key and value from the text line.
 
         Args:
@@ -632,7 +636,9 @@ class DSerieVersion(DSeriesInlineMappedProperties):
 
 class DSeriesInlineReversedProperties(DSeriesInlineProperties):
     @classmethod
-    def get_property_key_value(cls, text: str, expected_property: str) -> Tuple[str, str]:
+    def get_property_key_value(
+        cls, text: str, expected_property: str
+    ) -> Tuple[str, str]:
         """Returns the value content for a line of format:
         value : key || value = key
 
@@ -669,7 +675,9 @@ class DSeriesUnmappedNameProperties(DSeriesInlineMappedProperties):
     """
 
     @classmethod
-    def get_property_key_value(cls, text: str, expected_property: str) -> Tuple[str, str]:
+    def get_property_key_value(
+        cls, text: str, expected_property: str
+    ) -> Tuple[str, str]:
         """Gets both property key and value from the text line.
 
         Args:
@@ -962,7 +970,9 @@ class DSeriesTreeStructure(DSeriesStructure):
                 or issubclass(field, list)
                 or is_structure_collection(field)
             ):
-                lines_to_parse = cls.get_next_property_text_lines(text_lines[lines_read:])
+                lines_to_parse = cls.get_next_property_text_lines(
+                    text_lines[lines_read:]
+                )
                 parsed_tuple = get_list_values(struct_idx, field_name, lines_to_parse)
                 (
                     properties[field_name],
@@ -1133,7 +1143,10 @@ class DSeriesTreeStructureCollection(DSeriesStructure):
             read_lines += parsed_lines
             parsed_structures_collection.append(parsed_structure)
 
-        return cls(**{collection_property_name: parsed_structures_collection}), read_lines
+        return (
+            cls(**{collection_property_name: parsed_structures_collection}),
+            read_lines,
+        )
 
 
 class DSeriesMatrixTreeStructureCollection(DSeriesTreeStructureCollection):
@@ -1336,7 +1349,9 @@ class DSerieParser(BaseParser):
             if sline.startswith("[") and sline.endswith("]"):
                 # [ key name ] => key_name
                 key = make_key(sline[1:-1])
-                if skipped_keys and any(s_key for s_key in skipped_keys if s_key in key):
+                if skipped_keys and any(
+                    s_key for s_key in skipped_keys if s_key in key
+                ):
                     continue
 
                 # new group

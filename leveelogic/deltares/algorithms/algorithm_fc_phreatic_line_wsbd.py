@@ -36,8 +36,8 @@ class AlgorithmFCPhreaticLineWSBD(Algorithm):
             p2 = ds.phreatic_line.Points[1]
             p3 = ds.phreatic_line.Points[2]
             p6 = ds.phreatic_line.Points[5]
-            dx = p3.X - p2.X
-            dz = p3.Z - p2.Z
+            dx = float(p3.X) - float(p2.X)
+            dz = float(p3.Z) - float(p2.Z)
 
             surface_intersections = ds.surface_intersections(
                 [(ds.left, z), (ds.right, z)]
@@ -57,15 +57,15 @@ class AlgorithmFCPhreaticLineWSBD(Algorithm):
             # the third point gets the same dx / dz as the original calculation
             # but the z value must not be lower then point 6.z (embankement toe)
             ds.phreatic_line.Points[2] = PersistablePoint(
-                X=ds.phreatic_line.Points[1].X + dx,
-                Z=max(ds.phreatic_line.Points[1].Z + dz, p6.Z),
+                X=float(ds.phreatic_line.Points[1].X) + dx,
+                Z=max(float(ds.phreatic_line.Points[1].Z) + dz, float(p6.Z)),
             )
 
             # points 4 and 5 move close to point 6 and loose their function
-            ds.phreatic_line.Points[3].X = p6.X - 0.02
-            ds.phreatic_line.Points[3].Z = p6.Z
-            ds.phreatic_line.Points[4].X = p6.X - 0.01
-            ds.phreatic_line.Points[4].Z = p6.Z
+            ds.phreatic_line.Points[3].X = float(p6.X) - 0.02
+            ds.phreatic_line.Points[3].Z = float(p6.Z)
+            ds.phreatic_line.Points[4].X = float(p6.X) - 0.01
+            ds.phreatic_line.Points[4].Z = float(p6.Z)
 
             # PL3 is always created if the Waternet Creator has been used
             try:
@@ -91,17 +91,18 @@ class AlgorithmFCPhreaticLineWSBD(Algorithm):
             pl3_p1.Z = z
             # the second point will be placed at x intersection surface minus the original
             # distance between the old intersection of the surface and the second point on PL3
-            pl_dx = pl3.Points[2].X - pl3.Points[1].X
-            pl3_p2.X = ds.phreatic_line.Points[1].X - pl_dx
+            pl_dx = float(pl3.Points[2].X) - float(pl3.Points[1].X)
+            pl3_p2.X = float(ds.phreatic_line.Points[1].X) - pl_dx
             pl3_p2.Z = z
 
             # the third point will have the same distance between the x coords of the original
             # PL3 point 2 and 3 coords
-            pl3_p3.X = pl3_p2.X + pl_dx
+            pl3_p3.X = float(pl3_p2.X) + pl_dx
             # the z coordinate will have the same distance between the original z coords
             # PL3 points 2 and 3
             pl3_p3.Z = z + (
-                self.ds.phreatic_line.Points[2].Z - self.ds.phreatic_line.Points[0].Z
+                float(self.ds.phreatic_line.Points[2].Z)
+                - float(self.ds.phreatic_line.Points[0].Z)
             )
             # and finally point 4 will have the same z coord as pl3.z
             pl3_p4.Z = pl3_p3.Z
@@ -121,10 +122,12 @@ class AlgorithmFCPhreaticLineWSBD(Algorithm):
                 org_points[i][0] = org_points[len(org_points) - 1][0] - 0.01 * (
                     len(org_points) - i - 1  # move each point 1cm to the left
                 )
-                org_points[i][1] = pl3_p3.Z
-            org_points[-1][1] = pl3_p3.Z
+                org_points[i][1] = float(pl3_p3.Z)
+            org_points[-1][1] = float(pl3_p3.Z)
 
-            new_points = [(p.X, p.Z) for p in [pl3_p1, pl3_p2, pl3_p3, pl3_p4]]
+            new_points = [
+                (float(p.X), float(p.Z)) for p in [pl3_p1, pl3_p2, pl3_p3, pl3_p4]
+            ]
             new_points += org_points[4:]
             ds.set_headline_coordinates("Stijghoogtelijn 3 (PL3)", new_points)
 

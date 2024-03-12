@@ -37,37 +37,52 @@ class AlgorithmBermWSBD(Algorithm):
                 )
 
             # do we have the toe char point?
-            self.embankement_toe_land_side = (
-                self.ds.model.datastructure.waternetcreatorsettings[
-                    0
-                ].EmbankmentCharacteristics.EmbankmentToeLandSide
-            )
-
-            if isnan(self.embankement_toe_land_side):
+            try:
+                self.embankement_toe_land_side = float(
+                    self.ds.model.datastructure.waternetcreatorsettings[
+                        0
+                    ].EmbankmentCharacteristics.EmbankmentToeLandSide
+                )
+            except:
                 raise AlgorithmInputCheckError(
                     "The given stix file has no waternet creator settings where the embankment toe land side point is set which is required for this algorithm to run."
                 )
 
         # Ditch information, maybe for later
-        self.ditch_embankement_side = (
-            self.ds.model.datastructure.waternetcreatorsettings[
+        if (
+            not self.ds.model.datastructure.waternetcreatorsettings[
                 0
             ].DitchCharacteristics.DitchEmbankmentSide
-        )
+            == "NaN"
+        ):
+            self.ditch_embankement_side = float(
+                self.ds.model.datastructure.waternetcreatorsettings[
+                    0
+                ].DitchCharacteristics.DitchEmbankmentSide
+            )
+
         # MAYBE FOR PL REASONS
-        # self.ditch_bottom_embankement_side = (
+        # self.ditch_bottom_embankement_side = float(
         #     self.ds.model.datastructure.waternetcreatorsettings[
         #         0
         #     ].DitchCharacteristics.DitchBottomEmbankmentSide
         # )
-        # self.ditch_bottom_land_side = (
+        # self.ditch_bottom_land_side = float(
         #     self.ds.model.datastructure.waternetcreatorsettings[
         #         0
         #     ].DitchCharacteristics.DitchBottomLandSide
         # )
-        self.ditch_land_side = self.ds.model.datastructure.waternetcreatorsettings[
-            0
-        ].DitchCharacteristics.DitchLandSide
+        if (
+            not self.ds.model.datastructure.waternetcreatorsettings[
+                0
+            ].DitchCharacteristics.DitchLandSide
+            == "NaN"
+        ):
+            self.ditch_land_side = float(
+                self.ds.model.datastructure.waternetcreatorsettings[
+                    0
+                ].DitchCharacteristics.DitchLandSide
+            )
 
         if self.fill_ditch:
             if isnan(self.ditch_embankement_side) or isnan(self.ditch_land_side):

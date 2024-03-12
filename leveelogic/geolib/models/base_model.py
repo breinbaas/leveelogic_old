@@ -17,8 +17,8 @@ from pydantic import DirectoryPath, FilePath, HttpUrl, conlist
 from pydantic.error_wrappers import ValidationError
 from requests.auth import HTTPBasicAuth
 
-from geolib.errors import CalculationError
-from geolib.models import BaseDataClass
+from ..errors import CalculationError
+from ..models import BaseDataClass
 
 from .base_model_structure import BaseModelStructure
 from .meta import MetaData
@@ -133,7 +133,7 @@ class BaseModel(BaseDataClass, abc.ABC):
     @property
     def default_console_path(self) -> Path:
         raise NotImplementedError("Implement in concrete classes.")
-    
+
     @property
     def custom_console_path(self) -> Optional[Path]:
         return None
@@ -186,20 +186,21 @@ class BaseModel(BaseDataClass, abc.ABC):
         Requires a successful execute.
         """
         return self.datastructure.results
-    
+
     def get_meta_property(self, key: str) -> Optional[str]:
         """Get a metadata property from the input file."""
         if hasattr(meta, key):
             return meta.__getattribute__(key)
         else:
             return None
-        
+
     def set_meta_property(self, key: str, value: str) -> None:
         """Set a metadata property from the input file."""
         if hasattr(meta, key):
             meta.__setattr__(key, value)
         else:
             raise ValueError(f"Metadata property {key} does not exist.")
+
 
 class BaseModelList(BaseDataClass):
     """Hold multiple models that can be executed in parallel.

@@ -420,7 +420,7 @@ class DStability(BaseModel):
         """
         for hl in self.model.waternets[0].HeadLines:
             if hl.Label == label:
-                return [(p.X, p.Z) for p in hl.Points]
+                return [(float(p.X), float(p.Z)) for p in hl.Points]
 
         raise ValueError(f"Invalid headline label '{label}' (not found)")
 
@@ -508,7 +508,7 @@ class DStability(BaseModel):
             self.current_scenario_index, self.current_stage_index
         ).Layers
         polygons = []
-        points = []
+        self.points = []
 
         self.soillayers = []
         self.soils = {}
@@ -565,17 +565,15 @@ class DStability(BaseModel):
             soillayers[sl.LayerId] = sl.SoilId
 
         for layer in layers:
-            points += layer.Points
-            polygons.append(Polygon([(p.X, p.Z) for p in layer.Points]))
+            self.points += [(float(p.X), float(p.Z)) for p in layer.Points]
+            polygons.append(Polygon([(float(p.X), float(p.Z)) for p in layer.Points]))
             self.soillayers.append(
                 {
-                    "points": [(p.X, p.Z) for p in layer.Points],
+                    "points": [(float(p.X), float(p.Z)) for p in layer.Points],
                     "soil": self.soils[soillayers[layer.Id]],
                     "layer_id": layer.Id,
                 }
             )
-
-        self.points = [(p.X, p.Z) for p in points]
 
         # now remove the ids of the soils
         self.soils = [d for d in self.soils.values()]
@@ -687,7 +685,8 @@ class DStability(BaseModel):
         soillayers = []
 
         for layer in layers:
-            points = layer.Points + [layer.Points[0]]
+            points = [(float(p.X), float(p.Z)) for p in layer.Points]
+            points.append(points[0])
             for i in range(1, len(points)):
                 p1 = points[i - 1]
                 if i == len(points):
@@ -695,12 +694,14 @@ class DStability(BaseModel):
                 else:
                     p2 = points[i]
 
-                if min(p1.X, p2.X) <= x and x <= max(p1.X, p2.X):
+                if min(p1[0], p2[0]) <= x and x <= max(p1[0], p2[0]):
                     soil = self.get_soil_from_layer_id(layer.Id)
-                    if p1.X == p2.X:
-                        z = round(p1.Z, 3)
+                    if p1[0] == p2[0]:
+                        z = round(p1[1], 3)
                     else:
-                        z = round(p1.Z + (x - p1.X) / (p2.X - p1.X) * (p2.Z - p1.Z), 3)
+                        z = round(
+                            p1[1] + (x - p1[0]) / (p2[0] - p1[0]) * (p2[1] - p1[1]), 3
+                        )
                     soillayers.append((z, soil))
 
         soillayers = sorted(soillayers, key=lambda x: x[0], reverse=True)

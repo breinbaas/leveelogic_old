@@ -11,10 +11,10 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 from pydantic import ValidationError, conlist, root_validator, validator
 
-from geolib import __version__ as version
-from geolib.geometry import Point
-from geolib.models.base_model_structure import BaseModelStructure
-from geolib.soils import Soil
+from ....geolib import __version__ as version
+from ...geometry import Point
+from ...models.base_model_structure import BaseModelStructure
+from ...soils import Soil
 
 from .dstability_validator import DStabilityValidator
 from .utils import children
@@ -208,13 +208,13 @@ class WaternetCreatorSettings(DStabilitySubStructure):
     AquitardHeadLandSide: Optional[Union[float, str]] = "NaN"
     AquitardHeadWaterSide: Optional[Union[float, str]] = "NaN"
     ContentVersion: Optional[str] = "2"
-    DitchCharacteristics: Optional[
-        PersistableDitchCharacteristics
-    ] = PersistableDitchCharacteristics()
+    DitchCharacteristics: Optional[PersistableDitchCharacteristics] = (
+        PersistableDitchCharacteristics()
+    )
     DrainageConstruction: Optional[PersistablePoint] = PersistablePoint()
-    EmbankmentCharacteristics: Optional[
-        PersistableEmbankmentCharacteristics
-    ] = PersistableEmbankmentCharacteristics()
+    EmbankmentCharacteristics: Optional[PersistableEmbankmentCharacteristics] = (
+        PersistableEmbankmentCharacteristics()
+    )
     EmbankmentSoilScenario: EmbankmentSoilScenarioEnum = (
         EmbankmentSoilScenarioEnum.CLAY_EMBANKMENT_ON_CLAY
     )
@@ -544,7 +544,9 @@ class PersistableSuTable(DStabilityBaseModelStructure):
         su_table = []
         for su_table_point in self.SuTablePoints:
             su_table.append(
-                SuTablePoint(su=su_table_point.Su, stress=su_table_point.EffectiveStress)
+                SuTablePoint(
+                    su=su_table_point.Su, stress=su_table_point.EffectiveStress
+                )
             )
         return su_table
 
@@ -595,18 +597,18 @@ class PersistableSoil(DStabilityBaseModelStructure):
     IsProbabilistic: bool = False
     Name: Optional[str] = ""
     Notes: Optional[str] = ""
-    ShearStrengthModelTypeAbovePhreaticLevel: ShearStrengthModelTypePhreaticLevelInternal = (
-        ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_ADVANCED
-    )
-    ShearStrengthModelTypeBelowPhreaticLevel: ShearStrengthModelTypePhreaticLevelInternal = (
-        ShearStrengthModelTypePhreaticLevelInternal.SU
-    )
-    MohrCoulombClassicShearStrengthModel: PersistableMohrCoulombClassicShearStrengthModel = (
-        PersistableMohrCoulombClassicShearStrengthModel()
-    )
-    MohrCoulombAdvancedShearStrengthModel: PersistableMohrCoulombAdvancedShearStrengthModel = (
-        PersistableMohrCoulombAdvancedShearStrengthModel()
-    )
+    ShearStrengthModelTypeAbovePhreaticLevel: (
+        ShearStrengthModelTypePhreaticLevelInternal
+    ) = ShearStrengthModelTypePhreaticLevelInternal.MOHR_COULOMB_ADVANCED
+    ShearStrengthModelTypeBelowPhreaticLevel: (
+        ShearStrengthModelTypePhreaticLevelInternal
+    ) = ShearStrengthModelTypePhreaticLevelInternal.SU
+    MohrCoulombClassicShearStrengthModel: (
+        PersistableMohrCoulombClassicShearStrengthModel
+    ) = PersistableMohrCoulombClassicShearStrengthModel()
+    MohrCoulombAdvancedShearStrengthModel: (
+        PersistableMohrCoulombAdvancedShearStrengthModel
+    ) = PersistableMohrCoulombAdvancedShearStrengthModel()
     SuShearStrengthModel: PersistableSuShearStrengthModel = (
         PersistableSuShearStrengthModel()
     )
@@ -1095,7 +1097,10 @@ class Loads(DStabilitySubStructure):
     def add_load(
         self, load: "DStabilityLoad", consolidations: List["Consolidation"]
     ) -> Union[
-        PersistableUniformLoad, PersistableLineLoad, PersistableLayerLoad, PersistableTree
+        PersistableUniformLoad,
+        PersistableLineLoad,
+        PersistableLayerLoad,
+        PersistableTree,
     ]:
         internal_datastructure = load.to_internal_datastructure()
 
@@ -1292,13 +1297,13 @@ class PersistableTangentLines(DStabilityBaseModelStructure):
 
 
 class PersistableBishopBruteForceSettings(DStabilityBaseModelStructure):
-    GridEnhancements: Optional[
-        PersistableGridEnhancements
-    ] = PersistableGridEnhancements()
+    GridEnhancements: Optional[PersistableGridEnhancements] = (
+        PersistableGridEnhancements()
+    )
     SearchGrid: Optional[PersistableSearchGrid] = PersistableSearchGrid()
-    SlipPlaneConstraints: Optional[
-        PersistableSlipPlaneConstraints
-    ] = PersistableSlipPlaneConstraints()
+    SlipPlaneConstraints: Optional[PersistableSlipPlaneConstraints] = (
+        PersistableSlipPlaneConstraints()
+    )
     TangentLines: Optional[PersistableTangentLines] = PersistableTangentLines()
 
 
@@ -1322,9 +1327,9 @@ class PersistableSpencerSettings(DStabilityBaseModelStructure):
     Label: Optional[str] = ""
     Notes: Optional[str] = ""
     SlipPlane: Optional[List[Optional[PersistablePoint]]] = None
-    SlipPlaneConstraints: Optional[
-        PersistableGeneticSlipPlaneConstraints
-    ] = PersistableGeneticSlipPlaneConstraints()
+    SlipPlaneConstraints: Optional[PersistableGeneticSlipPlaneConstraints] = (
+        PersistableGeneticSlipPlaneConstraints()
+    )
 
 
 class OptionsTypeEnum(Enum):
@@ -1341,9 +1346,9 @@ class PersistableSpencerGeneticSettings(DStabilityBaseModelStructure):
     OptionsType: Optional[OptionsTypeEnum] = OptionsType.DEFAULT
     SlipPlaneA: Optional[List[Optional[PersistablePoint]]] = None
     SlipPlaneB: Optional[List[Optional[PersistablePoint]]] = None
-    SlipPlaneConstraints: Optional[
-        PersistableGeneticSlipPlaneConstraints
-    ] = PersistableGeneticSlipPlaneConstraints()
+    SlipPlaneConstraints: Optional[PersistableGeneticSlipPlaneConstraints] = (
+        PersistableGeneticSlipPlaneConstraints()
+    )
 
 
 class PersistableTwoCirclesOnTangentLine(DStabilityBaseModelStructure):
@@ -1355,9 +1360,9 @@ class PersistableTwoCirclesOnTangentLine(DStabilityBaseModelStructure):
 class PersistableUpliftVanSettings(DStabilityBaseModelStructure):
     Label: Optional[str] = ""
     Notes: Optional[str] = ""
-    SlipPlane: Optional[
-        PersistableTwoCirclesOnTangentLine
-    ] = PersistableTwoCirclesOnTangentLine()
+    SlipPlane: Optional[PersistableTwoCirclesOnTangentLine] = (
+        PersistableTwoCirclesOnTangentLine()
+    )
 
 
 class PersistableSearchArea(DStabilityBaseModelStructure):
@@ -1381,9 +1386,9 @@ class PersistableUpliftVanParticleSwarmSettings(DStabilityBaseModelStructure):
     OptionsType: Optional[OptionsTypeEnum] = OptionsType.DEFAULT
     SearchAreaA: Optional[PersistableSearchArea] = PersistableSearchArea()
     SearchAreaB: Optional[PersistableSearchArea] = PersistableSearchArea()
-    SlipPlaneConstraints: Optional[
-        PersistableSlipPlaneConstraints
-    ] = PersistableSlipPlaneConstraints()
+    SlipPlaneConstraints: Optional[PersistableSlipPlaneConstraints] = (
+        PersistableSlipPlaneConstraints()
+    )
     TangentArea: Optional[PersistableTangentArea] = PersistableTangentArea()
 
 
@@ -1392,22 +1397,22 @@ class CalculationSettings(DStabilitySubStructure):
 
     AnalysisType: Optional[AnalysisTypeEnum] = AnalysisTypeEnum.BISHOP_BRUTE_FORCE
     Bishop: Optional[PersistableBishopSettings] = PersistableBishopSettings()
-    BishopBruteForce: Optional[
-        PersistableBishopBruteForceSettings
-    ] = PersistableBishopBruteForceSettings()
+    BishopBruteForce: Optional[PersistableBishopBruteForceSettings] = (
+        PersistableBishopBruteForceSettings()
+    )
     CalculationType: Optional[CalculationTypeEnum] = CalculationTypeEnum.DETERMINISTIC
     ContentVersion: Optional[str] = "2"
     Id: Optional[str] = "19"
     ModelFactorMean: Optional[float] = 1.05
     ModelFactorStandardDeviation: Optional[float] = 0.033
     Spencer: Optional[PersistableSpencerSettings] = PersistableSpencerSettings()
-    SpencerGenetic: Optional[
-        PersistableSpencerGeneticSettings
-    ] = PersistableSpencerGeneticSettings()
+    SpencerGenetic: Optional[PersistableSpencerGeneticSettings] = (
+        PersistableSpencerGeneticSettings()
+    )
     UpliftVan: Optional[PersistableUpliftVanSettings] = PersistableUpliftVanSettings()
-    UpliftVanParticleSwarm: Optional[
-        PersistableUpliftVanParticleSwarmSettings
-    ] = PersistableUpliftVanParticleSwarmSettings()
+    UpliftVanParticleSwarm: Optional[PersistableUpliftVanParticleSwarmSettings] = (
+        PersistableUpliftVanParticleSwarmSettings()
+    )
 
     def set_bishop(self, bishop_settings: PersistableBishopSettings) -> None:
         self.Bishop = bishop_settings
@@ -1506,7 +1511,9 @@ class BishopBruteForceResult(DStabilitySubStructure):
         """Get condensed slipcircle data"""
         try:
             return BishopSlipCircleResult(
-                x=self.Circle.Center.X, z=self.Circle.Center.Z, radius=self.Circle.Radius
+                x=self.Circle.Center.X,
+                z=self.Circle.Center.Z,
+                radius=self.Circle.Radius,
             )
         except (ValidationError, AttributeError):
             raise ValueError(
@@ -1572,7 +1579,9 @@ class BishopReliabilityResult(DStabilitySubStructure):
         """Get condensed slipcircle data"""
         try:
             return BishopSlipCircleResult(
-                x=self.Circle.Center.X, z=self.Circle.Center.Z, radius=self.Circle.Radius
+                x=self.Circle.Center.X,
+                z=self.Circle.Center.Z,
+                radius=self.Circle.Radius,
             )
         except (ValidationError, AttributeError):
             raise ValueError(
@@ -1608,7 +1617,9 @@ class BishopBruteForceReliabilityResult(DStabilitySubStructure):
         """Get condensed slipcircle data"""
         try:
             return BishopSlipCircleResult(
-                x=self.Circle.Center.X, z=self.Circle.Center.Z, radius=self.Circle.Radius
+                x=self.Circle.Center.X,
+                z=self.Circle.Center.Z,
+                radius=self.Circle.Radius,
             )
         except (ValidationError, AttributeError):
             raise ValueError(
@@ -1631,7 +1642,9 @@ class BishopResult(DStabilitySubStructure):
         """Get condensed slipcircle data"""
         try:
             return BishopSlipCircleResult(
-                x=self.Circle.Center.X, z=self.Circle.Center.Z, radius=self.Circle.Radius
+                x=self.Circle.Center.X,
+                z=self.Circle.Center.Z,
+                radius=self.Circle.Radius,
             )
         except (ValidationError, AttributeError):
             raise ValueError(
@@ -1896,8 +1909,6 @@ class UpliftVanParticleSwarmReliabilityResult(DStabilitySubStructure):
         List[Optional[PersistableStatePointContribution]]
     ] = None
     TangentLine: Optional[float] = None
-    
-    
 
     @classmethod
     def structure_group(cls) -> str:
@@ -2066,7 +2077,9 @@ class DStabilityStructure(BaseModelStructure):
                     raise ValueError("GeometryIds not linked!")
                 if not list_has_id(values.get("loads"), stage.LoadsId):
                     raise ValueError("LoadsIds not linked!")
-                if not list_has_id(values.get("reinforcements"), stage.ReinforcementsId):
+                if not list_has_id(
+                    values.get("reinforcements"), stage.ReinforcementsId
+                ):
                     raise ValueError("ReinforcementsIds not linked!")
                 if not list_has_id(values.get("soillayers"), stage.SoilLayersId):
                     raise ValueError("SoilLayersIds not linked!")
@@ -2077,7 +2090,8 @@ class DStabilityStructure(BaseModelStructure):
                 ):
                     raise ValueError("StateCorrelationsIds not linked!")
                 if not list_has_id(
-                    values.get("waternetcreatorsettings"), stage.WaternetCreatorSettingsId
+                    values.get("waternetcreatorsettings"),
+                    stage.WaternetCreatorSettingsId,
                 ):
                     raise ValueError("WaternetCreatorSettingsIds not linked!")
                 if not list_has_id(values.get("waternets"), stage.WaternetId):
@@ -2357,7 +2371,9 @@ class DStabilityStructure(BaseModelStructure):
         )
 
     def _get_excavations(self, scenario_index: int, stage_index: int):
-        decorations_id = self.scenarios[scenario_index].Stages[stage_index].DecorationsId
+        decorations_id = (
+            self.scenarios[scenario_index].Stages[stage_index].DecorationsId
+        )
 
         for decoration in self.decorations:
             if decoration.Id == decorations_id:

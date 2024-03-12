@@ -3,7 +3,7 @@ from typing import Any, BinaryIO, Dict, Union
 
 from pydantic import FilePath
 
-from geolib.models import BaseDataClass
+from ..models import BaseDataClass
 
 
 class BaseSerializer(BaseDataClass):

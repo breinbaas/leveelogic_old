@@ -1,12 +1,13 @@
 """
 This module handles the four types of loads in DStability.
 """
+
 import abc
 from typing import List, Optional
 
 from pydantic import NoneStr, confloat, validator
 
-from geolib.models import BaseDataClass
+from ...models import BaseDataClass
 
 from ...geometry.one import Point
 from .internal import (
@@ -47,7 +48,9 @@ class UniformLoad(DStabilityLoad):
     @validator("end")
     def end_greater_than_start(cls, v, values):
         if v <= values["start"]:
-            raise ValueError(f"End {v} should be greater than start ({values['start']})")
+            raise ValueError(
+                f"End {v} should be greater than start ({values['start']})"
+            )
         return v
 
     def to_internal_datastructure(self) -> PersistableUniformLoad:
