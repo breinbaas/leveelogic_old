@@ -8,6 +8,7 @@ from typing import Dict, List, Tuple, Union, BinaryIO, Optional
 from dotenv import load_dotenv
 import os
 import subprocess
+from math import nan
 
 from ..geolib.soils.soil import (
     SoilWeightParameters,
@@ -239,7 +240,7 @@ class DStability(BaseModel):
         """
         pl = self.phreatic_line
         if pl is not None:
-            return [(p.X, p.Z) for p in self.phreatic_line.Points]
+            return [(float(p.X), float(p.Z)) for p in self.phreatic_line.Points]
         else:
             return []
 
@@ -352,51 +353,106 @@ class DStability(BaseModel):
         wns = self.model.datastructure.waternetcreatorsettings[0]
 
         if point_type == CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE:
-            return CharacteristicPoint(
-                x=wns.EmbankmentCharacteristics.EmbankmentToeWaterSide,
-                point_type=CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE,
-            )
+            if wns.EmbankmentCharacteristics.EmbankmentToeWaterSide is not "NaN":
+                return CharacteristicPoint(
+                    x=float(wns.EmbankmentCharacteristics.EmbankmentToeWaterSide),
+                    point_type=CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE,
+                )
+            else:
+                return CharacteristicPoint(
+                    x=nan,
+                    point_type=CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE,
+                )
         elif point_type == CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE:
-            return CharacteristicPoint(
-                x=wns.EmbankmentCharacteristics.EmbankmentTopWaterSide,
-                point_type=CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE,
-            )
+            if wns.EmbankmentCharacteristics.EmbankmentTopWaterSide is not "NaN":
+                return CharacteristicPoint(
+                    x=float(wns.EmbankmentCharacteristics.EmbankmentTopWaterSide),
+                    point_type=CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE,
+                )
+            else:
+                return CharacteristicPoint(
+                    x=nan,
+                    point_type=CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE,
+                )
         elif point_type == CharacteristicPointType.EMBANKEMENT_TOP_LAND_SIDE:
-            return CharacteristicPoint(
-                x=wns.EmbankmentCharacteristics.EmbankmentTopLandSide,
-                point_type=CharacteristicPointType.EMBANKEMENT_TOP_LAND_SIDE,
-            )
+            if wns.EmbankmentCharacteristics.EmbankmentTopLandSide is not "NaN":
+                return CharacteristicPoint(
+                    x=float(wns.EmbankmentCharacteristics.EmbankmentTopLandSide),
+                    point_type=CharacteristicPointType.EMBANKEMENT_TOP_LAND_SIDE,
+                )
+            else:
+                return CharacteristicPoint(
+                    x=nan,
+                    point_type=CharacteristicPointType.EMBANKEMENT_TOP_LAND_SIDE,
+                )
 
         elif point_type == CharacteristicPointType.SHOULDER_BASE_LAND_SIDE:
-            return CharacteristicPoint(
-                x=wns.EmbankmentCharacteristics.ShoulderBaseLandSide,
-                point_type=CharacteristicPointType.SHOULDER_BASE_LAND_SIDE,
-            )
+            if wns.EmbankmentCharacteristics.ShoulderBaseLandSide is not "NaN":
+                return CharacteristicPoint(
+                    x=float(wns.EmbankmentCharacteristics.ShoulderBaseLandSide),
+                    point_type=CharacteristicPointType.SHOULDER_BASE_LAND_SIDE,
+                )
+            else:
+                return CharacteristicPoint(
+                    x=nan,
+                    point_type=CharacteristicPointType.SHOULDER_BASE_LAND_SIDE,
+                )
         elif point_type == CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE:
-            return CharacteristicPoint(
-                x=wns.EmbankmentCharacteristics.EmbankmentToeLandSide,
-                point_type=CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE,
-            )
+            if wns.EmbankmentCharacteristics.EmbankmentToeLandSide is not "NaN":
+
+                return CharacteristicPoint(
+                    x=float(wns.EmbankmentCharacteristics.EmbankmentToeLandSide),
+                    point_type=CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE,
+                )
+            else:
+                return CharacteristicPoint(
+                    x=nan,
+                    point_type=CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE,
+                )
         elif point_type == CharacteristicPointType.DITCH_EMBANKEMENT_SIDE:
-            return CharacteristicPoint(
-                x=wns.DitchCharacteristics.DitchEmbankmentSide,
-                point_type=CharacteristicPointType.DITCH_EMBANKEMENT_SIDE,
-            )
+            if wns.DitchCharacteristics.DitchEmbankmentSide is not "NaN":
+                return CharacteristicPoint(
+                    x=float(wns.DitchCharacteristics.DitchEmbankmentSide),
+                    point_type=CharacteristicPointType.DITCH_EMBANKEMENT_SIDE,
+                )
+            else:
+                return CharacteristicPoint(
+                    x=nan,
+                    point_type=CharacteristicPointType.DITCH_EMBANKEMENT_SIDE,
+                )
         elif point_type == CharacteristicPointType.DITCH_BOTTOM_EMBANKEMENT_SIDE:
-            return CharacteristicPoint(
-                x=wns.DitchCharacteristics.DitchBottomEmbankmentSide,
-                point_type=CharacteristicPointType.DITCH_BOTTOM_EMBANKEMENT_SIDE,
-            )
+            if wns.DitchCharacteristics.DitchBottomEmbankmentSide is not "NaN":
+                return CharacteristicPoint(
+                    x=float(wns.DitchCharacteristics.DitchBottomEmbankmentSide),
+                    point_type=CharacteristicPointType.DITCH_BOTTOM_EMBANKEMENT_SIDE,
+                )
+            else:
+                return CharacteristicPoint(
+                    x=nan,
+                    point_type=CharacteristicPointType.DITCH_BOTTOM_EMBANKEMENT_SIDE,
+                )
         elif point_type == CharacteristicPointType.DITCH_BOTTOM_LAND_SIDE:
-            return CharacteristicPoint(
-                x=wns.DitchCharacteristics.DitchBottomLandSide,
-                point_type=CharacteristicPointType.DITCH_BOTTOM_LAND_SIDE,
-            )
+            if wns.DitchCharacteristics.DitchBottomLandSide is not "NaN":
+                return CharacteristicPoint(
+                    x=float(wns.DitchCharacteristics.DitchBottomLandSide),
+                    point_type=CharacteristicPointType.DITCH_BOTTOM_LAND_SIDE,
+                )
+            else:
+                return CharacteristicPoint(
+                    x=nan,
+                    point_type=CharacteristicPointType.DITCH_BOTTOM_LAND_SIDE,
+                )
         elif point_type == CharacteristicPointType.DITCH_LAND_SIDE:
-            return CharacteristicPoint(
-                x=wns.DitchCharacteristics.DitchLandSide,
-                point_type=CharacteristicPointType.DITCH_LAND_SIDE,
-            )
+            if wns.DitchCharacteristics.DitchLandSide is not "NaN":
+                return CharacteristicPoint(
+                    x=float(wns.DitchCharacteristics.DitchLandSide),
+                    point_type=CharacteristicPointType.DITCH_LAND_SIDE,
+                )
+            else:
+                return CharacteristicPoint(
+                    x=nan,
+                    point_type=CharacteristicPointType.DITCH_LAND_SIDE,
+                )
 
         else:
             raise ValueError(
