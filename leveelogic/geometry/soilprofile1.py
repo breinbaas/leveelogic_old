@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import numpy as np
 
 from pydantic import BaseModel
@@ -141,6 +141,12 @@ class SoilProfile1(DataModel):
     #     for i in range(1, len(self.soillayers)):
     #         if self.soillayers[i - 1].bottom != self.soillayers[i].top:
     #             raise SoilProfile1GapError(f"Gap found between layers {i-1} and {i}")
+
+    def soilcode_at(self, z: float) -> Optional[str]:
+        for l in self.soillayers:
+            if l.bottom <= z and z <= l.top:
+                return l.soilcode
+        return None
 
     def add_top_layer(self, top: float, soilcode: str):
         """Add a layer on top of the current soillayers with a given top coordinate and the given soilcode

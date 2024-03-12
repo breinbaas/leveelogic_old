@@ -11,7 +11,7 @@ class AlgorithmFill(Algorithm):
     """This algorithm will fill the surface of the current geometry until the given line
 
     Args:
-        points (List[Tuple[float, float]]): list of points that form the lower boundary of the cut
+        points (List[Tuple[float, float]]): list of points that form the top boundary of the fill
         soilcode (str): soil code of the fill material
     """
 
@@ -41,14 +41,16 @@ class AlgorithmFill(Algorithm):
         if intersections.is_empty:
             pass
         elif type(intersections) == Polygon:
-            if intersections.area > 0.01:                
+            if intersections.area > 0.01:
                 new_soilpolygons.append(
                     SoilPolygon.from_shapely(intersections, self.soilcode)
                 )
         elif type(intersections) == MultiPolygon:
             for geom in intersections.geoms:
                 if geom.area > 0.01:
-                    new_soilpolygons.append(SoilPolygon.from_shapely(geom, self.soilcode))
+                    new_soilpolygons.append(
+                        SoilPolygon.from_shapely(geom, self.soilcode)
+                    )
         else:
             t = type(intersections)
             raise ValueError("Unhandled intersection type")

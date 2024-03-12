@@ -9,7 +9,11 @@ from typing import Dict, List, Tuple, Union, BinaryIO, Optional
 from dotenv import load_dotenv
 import os
 import subprocess
-from geolib.soils.soil import SoilWeightParameters, MohrCoulombParameters
+from geolib.soils.soil import (
+    SoilWeightParameters,
+    MohrCoulombParameters,
+    ShearStrengthModelTypePhreaticLevel,
+)
 from geolib.geometry.one import Point
 from geolib.models.dstability.internal import (
     PersistableHeadLine,
@@ -23,6 +27,7 @@ from geolib.models.dstability.internal import (
     SoilVisualisation,
     WaternetCreatorSettings,
 )
+
 
 from ..geometry.characteristic_point import (
     CharacteristicPoint,
@@ -115,6 +120,9 @@ class DStability(BaseModel):
                         dilatancy_angle=soil.cohesion,
                         friction_angle=soil.friction_angle,
                     ),
+                    shear_strength_model_above_phreatic_level=ShearStrengthModelTypePhreaticLevel.MOHR_COULOMB,
+                    shear_strength_model_below_phreatic_level=ShearStrengthModelTypePhreaticLevel.MOHR_COULOMB,
+                    name=soil.code,
                 )
             )
             soil_ids[soil.code] = soil_id
