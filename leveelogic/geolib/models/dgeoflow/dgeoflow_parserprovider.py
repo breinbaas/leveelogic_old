@@ -6,8 +6,8 @@ from zipfile import ZipFile
 from pydantic import DirectoryPath, FilePath
 from zipp import Path
 
-from geolib.models.parsers import BaseParser, BaseParserProvider
-from geolib.models.utils import get_filtered_type_hints
+from ...models.parsers import BaseParser, BaseParserProvider
+from ...models.utils import get_filtered_type_hints
 
 from .internal import BaseModelStructure, DGeoFlowStructure
 

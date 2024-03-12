@@ -6,9 +6,9 @@ from typing import BinaryIO, Dict, List, Optional, Set, Type, Union
 
 from pydantic import DirectoryPath, FilePath
 
-from geolib.geometry import Point
-from geolib.models import BaseDataClass, BaseModel
-from geolib.soils import Soil
+from ...geometry import Point
+from ...models import BaseDataClass, BaseModel
+from ...soils import Soil
 
 from ...utils import camel_to_snake, snake_to_camel
 from .dgeoflow_parserprovider import DGeoFlowParserProvider
@@ -60,7 +60,7 @@ class DGeoFlowModel(BaseModel):
     @property
     def default_console_path(self) -> Path:
         return Path("DGeoFlowConsole/DGeoFlow Console.exe")
-    
+
     @property
     def custom_console_path(self) -> Path:
         return self.get_meta_property("dgeoflow_console_path")
@@ -234,7 +234,9 @@ class DGeoFlowModel(BaseModel):
 
         # add the connection between the layer and the soil to soillayers
         soil = self.soils.get_soil(soil_code)
-        soillayerscollection.add_soillayer(layer_id=persistable_layer.Id, soil_id=soil.id)
+        soillayerscollection.add_soillayer(
+            layer_id=persistable_layer.Id, soil_id=soil.id
+        )
         return int(persistable_layer.Id)
 
     def add_meshproperties(

@@ -3,8 +3,8 @@ from typing import List
 
 from pydantic import FilePath
 
-from geolib.errors import NotConcreteError
-from geolib.models.base_model_structure import BaseModelStructure
+from ..errors import NotConcreteError
+from ..models.base_model_structure import BaseModelStructure
 
 
 class BaseParser(abc.ABC):

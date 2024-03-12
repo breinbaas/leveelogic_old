@@ -8,10 +8,11 @@ specify, for example height, other fields left None.
 For profiles used in 1D applications, see :class:`~geolib.soils.layers.ProfileLayer`
 
 """
+
 from math import isclose
 from typing import Optional
 
-from geolib.models import BaseDataClass
+from ..models import BaseDataClass
 
 NODATA = -999.0  # TODO why is this implemented instead of None?
 

@@ -11,11 +11,11 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 from pydantic import ValidationError, confloat, conlist, root_validator, validator
 
-from geolib import BaseModelStructure
-from geolib import __version__ as version
-from geolib.geometry import Point
-from geolib.soils import Soil, StorageParameters
-from geolib.utils import snake_to_camel
+from ....geolib import BaseModelStructure
+from ....geolib import __version__ as version
+from ...geometry import Point
+from ...soils import Soil, StorageParameters
+from ...utils import snake_to_camel
 
 from .dgeoflow_validator import DGeoFlowValidator
 from .utils import children
@@ -466,7 +466,9 @@ class PersistableBoundaryCondition(DGeoFlowBaseModelStructure):
     Notes: Optional[str]
     Id: Optional[str]
     Points: conlist(PersistablePoint, min_items=2)
-    FixedHeadBoundaryConditionProperties: PersistableFixedHeadBoundaryConditionProperties
+    FixedHeadBoundaryConditionProperties: (
+        PersistableFixedHeadBoundaryConditionProperties
+    )
 
 
 class BoundaryConditionCollection(DGeoFlowSubStructure):
@@ -537,7 +539,9 @@ class PipeTrajectory(DGeoFlowBaseModelStructure):
     Notes: Optional[str]
     D70: Optional[float]
     Points: Optional[List[PersistablePoint]]
-    ErosionDirection: Optional[ErosionDirectionEnum] = ErosionDirectionEnum.RIGHT_TO_LEFT
+    ErosionDirection: Optional[ErosionDirectionEnum] = (
+        ErosionDirectionEnum.RIGHT_TO_LEFT
+    )
     ElementSize: Optional[float]
 
 
@@ -550,11 +554,13 @@ class PersistableCriticalHeadSearchSpace(DGeoFlowBaseModelStructure):
 class PersistableCalculation(DGeoFlowBaseModelStructure):
     Label: Optional[str]
     Notes: Optional[str]
-    CalculationType: Optional[CalculationTypeEnum] = CalculationTypeEnum.GROUNDWATER_FLOW
+    CalculationType: Optional[CalculationTypeEnum] = (
+        CalculationTypeEnum.GROUNDWATER_FLOW
+    )
     CriticalHeadId: Optional[str]
-    CriticalHeadSearchSpace: Optional[
-        PersistableCriticalHeadSearchSpace
-    ] = PersistableCriticalHeadSearchSpace()
+    CriticalHeadSearchSpace: Optional[PersistableCriticalHeadSearchSpace] = (
+        PersistableCriticalHeadSearchSpace()
+    )
     PipeTrajectory: Optional[PipeTrajectory]
     MeshPropertiesId: Optional[str]
     ResultsId: Optional[str]
@@ -711,7 +717,9 @@ class DGeoFlowStructure(BaseModelStructure):
         SoilLayerCollection(Id="14")
     ]  # soillayers/soillayers_x.json
     soils: SoilCollection = SoilCollection()  # soils.json
-    soilvisualizations: SoilVisualisation = SoilVisualisation()  # soilvisualizations.json
+    soilvisualizations: SoilVisualisation = (
+        SoilVisualisation()
+    )  # soilvisualizations.json
 
     projectinfo: ProjectInfo = ProjectInfo()  # projectinfo.json
     geometries: List[Geometry] = [Geometry(Id="1")]  # geometries/geometry_x.json
@@ -786,7 +794,8 @@ class DGeoFlowStructure(BaseModelStructure):
         for _, scenario in enumerate(values.get("scenarios")):
             for _, stage in enumerate(scenario.Stages):
                 if not list_has_id(
-                    values.get("boundary_conditions"), stage.BoundaryConditionCollectionId
+                    values.get("boundary_conditions"),
+                    stage.BoundaryConditionCollectionId,
                 ):
                     raise ValueError("BoundaryConditionCollectionIds not linked!")
 
@@ -869,7 +878,9 @@ class DGeoFlowStructure(BaseModelStructure):
         """Add a new default (empty) calculation to DStability."""
 
         new_calculation = PersistableCalculation(
-            Label=label, Notes=notes, CalculationType=CalculationTypeEnum.GROUNDWATER_FLOW
+            Label=label,
+            Notes=notes,
+            CalculationType=CalculationTypeEnum.GROUNDWATER_FLOW,
         )
 
         scenario = self.scenarios[scenario_index]
