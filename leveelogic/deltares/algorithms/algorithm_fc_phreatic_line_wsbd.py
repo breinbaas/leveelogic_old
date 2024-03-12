@@ -1,8 +1,8 @@
 from typing import List
 from copy import deepcopy
 import numpy as np
-from geolib.models.dstability.internal import PersistablePoint
 
+from ...geolib.models.dstability.internal import PersistablePoint
 from .algorithm import Algorithm
 from ..dstability import DStability
 

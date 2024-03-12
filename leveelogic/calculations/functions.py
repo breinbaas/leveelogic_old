@@ -1,5 +1,5 @@
 from statistics import NormalDist
-from geolib.models.dstability.internal import AnalysisTypeEnum
+from ..geolib.models.dstability.internal import AnalysisTypeEnum
 
 
 def get_model_factor(analysis_type: AnalysisTypeEnum) -> float:

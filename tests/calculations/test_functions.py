@@ -1,7 +1,7 @@
 import pytest
 
 from leveelogic.calculations.functions import *
-from geolib.models.dstability.internal import AnalysisTypeEnum
+from leveelogic.geolib.models.dstability.internal import AnalysisTypeEnum
 import pytest
 
 

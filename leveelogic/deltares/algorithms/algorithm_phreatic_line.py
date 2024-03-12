@@ -1,7 +1,7 @@
 from copy import deepcopy
-from geolib.geometry import Point
 from typing import List, Tuple
 
+from ...geolib.geometry import Point
 from ...deltares.algorithms.algorithm import Algorithm
 from ...helpers import polyline_polyline_intersections
 from ...deltares.dstability import DStability

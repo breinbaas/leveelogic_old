@@ -1,8 +1,9 @@
-from geolib.models.dgeoflow import DGeoFlowModel
 from pydantic import BaseModel
 from pathlib import Path
 from typing import List, Dict, Tuple
 from shapely.geometry import Polygon
+
+from ..geolib.models.dgeoflow import DGeoFlowModel
 
 
 class DGeoFlow(BaseModel):
