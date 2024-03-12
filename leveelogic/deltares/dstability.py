@@ -1,5 +1,4 @@
 from pydantic import BaseModel, DirectoryPath, FilePath
-import geolib as gl
 from enum import IntEnum
 from pathlib import Path
 from shapely.geometry import Polygon
@@ -9,13 +8,15 @@ from typing import Dict, List, Tuple, Union, BinaryIO, Optional
 from dotenv import load_dotenv
 import os
 import subprocess
-from geolib.soils.soil import (
+
+from ..geolib.soils.soil import (
     SoilWeightParameters,
     MohrCoulombParameters,
     ShearStrengthModelTypePhreaticLevel,
 )
-from geolib.geometry.one import Point
-from geolib.models.dstability.internal import (
+from ..geolib.geometry.one import Point
+from ..geolib.models.dstability import DStabilityModel
+from ..geolib.models.dstability.internal import (
     PersistableHeadLine,
     PersistablePoint,
     ShearStrengthModelTypePhreaticLevelInternal,
@@ -27,8 +28,6 @@ from geolib.models.dstability.internal import (
     SoilVisualisation,
     WaternetCreatorSettings,
 )
-
-
 from ..geometry.characteristic_point import (
     CharacteristicPoint,
     CharacteristicPointType,
@@ -55,7 +54,7 @@ class MaterialLayoutType(IntEnum):
 class DStability(BaseModel):
     name: str = ""
     characteristic_points: List[CharacteristicPoint] = []
-    model: gl.DStabilityModel = gl.DStabilityModel()
+    model: DStabilityModel = DStabilityModel()
     current_scenario_index: int = 0
     current_stage_index: int = 0
     soillayers: List[Dict] = []
@@ -120,8 +119,8 @@ class DStability(BaseModel):
                         dilatancy_angle=soil.cohesion,
                         friction_angle=soil.friction_angle,
                     ),
-                    shear_strength_model_above_phreatic_level=ShearStrengthModelTypePhreaticLevel.MOHR_COULOMB,
-                    shear_strength_model_below_phreatic_level=ShearStrengthModelTypePhreaticLevel.MOHR_COULOMB,
+                    shear_strength_model_above_phreatic_level="Mohr_Coulomb",
+                    shear_strength_model_below_phreatic_level="Mohr_Coulomb",
                     name=soil.code,
                 )
             )

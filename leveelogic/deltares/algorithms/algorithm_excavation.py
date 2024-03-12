@@ -1,6 +1,6 @@
 from copy import deepcopy
-from geolib.geometry.one import Point
 
+from ...geolib.geometry.one import Point
 from .algorithm import Algorithm
 from ..dstability import DStability
 

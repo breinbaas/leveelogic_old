@@ -1,7 +1,7 @@
 from typing import List, Tuple
 from copy import deepcopy
 from shapely.geometry import Polygon, MultiPolygon
-from geolib.models.dstability.internal import (
+from ...geolib.models.dstability.internal import (
     AnalysisTypeEnum,
     PersistableSearchGrid,
     NullablePersistablePoint,

@@ -1,9 +1,9 @@
 from copy import deepcopy
-from geolib.geometry import Point
 from math import isnan, nan
 import numpy as np
 from typing import List
 
+from ...geolib.geometry import Point
 from ..dstability import DStability
 from .algorithm import Algorithm, AlgorithmInputCheckError
 from ...helpers import polyline_polyline_intersections
