@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "leveelogic"
-version = "0.5.2"
+version = "0.5.3"
 description = "The toolkit for levee assessments by LeveeLogic"
 authors = ["Rob van Putten <leveelogic@gmail.com>"]
 readme = "README.md"
