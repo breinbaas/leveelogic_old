@@ -18,7 +18,7 @@ class CalculationResult(BaseModel):
 
 
 class DStabilityCalculationResult(CalculationResult):
-    safety_factor: float = None
+    safety_factor: float = 0.0
 
 
 class DGeoFlowCalculationResult(CalculationResult):
@@ -78,6 +78,24 @@ class DSeriesCalculator(BaseModel):
     calculation_model_type: CalculationModelType = CalculationModelType.NONE
     calculation_models: List[CalculationModel] = []
     logfile: Union[Path, str] = None
+
+    def get_model_by_name(self, model_name: str):
+        for cm in self.calculation_models:
+            if cm.name == model_name:
+                return cm
+        raise ValueError(f"No model with name '{model_name}'")
+
+    def get_model_result_dict(self):
+        if self.calculation_model_type == CalculationModelType.DSTABILITY:
+            return {
+                cm.name: cm.result.safety_factor
+                for cm in self.calculation_models
+                if cm.result.safety_factor is not None
+            }
+        elif self.calculation_model_type == CalculationModelType.DGEOFLOW:
+            raise NotImplementedError()
+        else:
+            raise ValueError("Unknown calculation model type encountered")
 
     def add_models(self, models: List[Union[DStability, DGeoFlow]], names: List[str]):
         if len(models) != len(names):
