@@ -51,3 +51,10 @@ class TestDSeriesCalculator:
             assert dsc.calculation_models[1].result.safety_factor == pytest.approx(
                 0.382, abs=1e-3
             )
+
+    def test_export_files(self):
+        ds1 = DStability.from_stix("tests/testdata/stix/complex_geometry.stix")
+        ds2 = DStability.from_stix("tests/testdata/stix/simple_geometry.stix")
+        dsc = DSeriesCalculator()
+        dsc.add_models([ds1, ds2], ["test_dsc_model_1", "test_dsc_model_2"])
+        dsc.export_files("tests/testdata/output/")

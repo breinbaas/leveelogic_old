@@ -79,6 +79,19 @@ class DSeriesCalculator(BaseModel):
     calculation_models: List[CalculationModel] = []
     logfile: Union[Path, str] = None
 
+    def export_files(self, output_path: Union[Path, str]):
+        for cm in self.calculation_models:
+            if self.calculation_model_type == CalculationModelType.DSTABILITY:
+                cm.model.serialize(Path(output_path) / f"{cm.name}.stix")
+            elif self.calculation_model_type == CalculationModelType.DGEOFLOW:
+                cm.model.serialize(Path(output_path) / f"{cm.name}.flox")
+
+    def clear(self, unset_logfile=False):
+        self.calculation_model_type = CalculationModelType.NONE
+        self.calculation_models = []
+        if unset_logfile:
+            self.logfile = None
+
     def get_model_by_name(self, model_name: str):
         for cm in self.calculation_models:
             if cm.name == model_name:
