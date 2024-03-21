@@ -28,6 +28,7 @@ from ..geolib.models.dstability.internal import (
     Soil,
     SoilVisualisation,
     WaternetCreatorSettings,
+    EmbankmentSoilScenarioEnum,
 )
 from ..geometry.characteristic_point import (
     CharacteristicPoint,
@@ -252,6 +253,34 @@ class DStability(BaseModel):
         ]
 
     @property
+    def material_layout(self) -> MaterialLayoutType:
+        wns = self.model.datastructure.waternetcreatorsettings[0]
+        if (
+            wns.EmbankmentSoilScenario
+            == EmbankmentSoilScenarioEnum.CLAY_EMBANKMENT_ON_CLAY
+        ):
+            return MaterialLayoutType.CLAY_EMBANKEMENT_ON_CLAY
+        elif (
+            wns.EmbankmentSoilScenario
+            == EmbankmentSoilScenarioEnum.SAND_EMBANKMENT_ON_CLAY
+        ):
+            return MaterialLayoutType.SAND_EMBANKEMENT_ON_CLAY
+        elif (
+            wns.EmbankmentSoilScenario
+            == EmbankmentSoilScenarioEnum.CLAY_EMBANKMENT_ON_SAND
+        ):
+            return MaterialLayoutType.CLAY_EMBANKEMENT_ON_SAND
+        elif (
+            wns.EmbankmentSoilScenario
+            == EmbankmentSoilScenarioEnum.SAND_EMBANKMENT_ON_SAND
+        ):
+            return MaterialLayoutType.SAND_EMBANKEMENT_ON_SAND
+        else:
+            raise ValueError(
+                f"Invalid materiallaayout found '{wns.EmbankmentSoilScenario}'"
+            )
+
+    @property
     def soilcollection(self) -> SoilCollection:
         sc = SoilCollection()
 
@@ -291,10 +320,10 @@ class DStability(BaseModel):
 
         if p1.is_valid and p2.is_valid and p3.is_valid and p4.is_valid:
             return [
-                (p1.x, self.z_at(p1.x)),
-                (p2.x, self.z_at(p1.x)),
-                (p3.x, self.z_at(p1.x)),
-                (p4.x, self.z_at(p1.x)),
+                (p1.x, self.z_at(p1.x)[0]),
+                (p2.x, self.z_at(p1.x)[0]),
+                (p3.x, self.z_at(p1.x)[0]),
+                (p4.x, self.z_at(p1.x)[0]),
             ]
         else:
             return []
