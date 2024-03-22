@@ -20,6 +20,7 @@ class AlgorithmPhreaticLineStix(Algorithm):
     C_offset: float = 1.5
     E_offset: float = 0.0
     D_offset: Optional[float] = None
+    surface_offset: float = 0.0
 
     def _check_input(self):
         # TODO the stix file must contain the waternet creator settings
@@ -187,7 +188,7 @@ class AlgorithmPhreaticLineStix(Algorithm):
             if intersections is not None and len(intersections) > 0:
                 Fx, Fz = intersections[0]
 
-        return [(Ax, Az), (Bx, Bz), (Cx, Cz), (Dx, Dz), (Ex, Ez), (Fx, Fz)]
+        return [[Ax, Az], [Bx, Bz], [Cx, Cz], [Dx, Dz], [Ex, Ez], [Fx, Fz]]
 
     def _execute(self) -> DStability:
         ds = deepcopy(self.ds)
@@ -204,11 +205,37 @@ class AlgorithmPhreaticLineStix(Algorithm):
         else:
             abcdef = self._execute_sand_on_sand_layout(ds)
 
-        # TODO > zorgen dat de freatische lijn niet boven het maaiveld uitkomt tussen punt C en E/F
+        # from point C to point F we want to be sure that all points are below the surface
+        plpoints = [[ds.left, self.river_level]] + abcdef[:2]
 
-        plline_points = (
-            [(ds.left, self.river_level)] + abcdef + [(ds.right, self.polder_level)]
-        )
+        # first insert all the points based on linear interpolation
+        # without checking the height
+        for i in range(2, len(abcdef) - 1):
+            p1 = abcdef[i]
+            p2 = abcdef[i + 1]
 
-        ds.set_phreatic_line(plline_points)
+            plpoints.append(p1)
+            for p in ds.surface:
+                if p1[0] < p[0] and p[0] < p2[0]:
+                    z_interpolated = p1[1] + (p[0] - p1[0]) / (p2[0] - p1[0]) * (
+                        p2[1] - p1[1]
+                    )
+                    plpoints.append([p[0], z_interpolated])
+
+            if i == len(abcdef) - 2:
+                plpoints.append(p2)
+
+        # now check the height for all points between C and (including) F
+        for i in range(len(plpoints)):
+            if plpoints[i][0] > abcdef[2][0] and plpoints[i][0] <= abcdef[-1][0]:
+                z_surface = ds.z_at(plpoints[i][0])[0]
+                if plpoints[i][1] > z_surface - self.surface_offset:
+                    plpoints[i][1] = z_surface - self.surface_offset
+                # but don't go higher than the previous point
+                if i > 0 and plpoints[i][1] > plpoints[i - 1][1]:
+                    plpoints[i][1] = plpoints[i - 1][1]
+
+        plpoints.append([ds.right, self.polder_level])
+
+        ds.set_phreatic_line(plpoints)
         return ds

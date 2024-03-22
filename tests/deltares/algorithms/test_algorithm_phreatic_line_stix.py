@@ -13,6 +13,8 @@ class TestAlgorithmPhreaticLineStix:
 
     def test_sand_on_clay(self):
         ds = DStability.from_stix("tests/testdata/stix/sand_on_clay.stix")
-        alg = AlgorithmPhreaticLineStix(ds=ds, river_level=5.0, polder_level=-1.5)
+        alg = AlgorithmPhreaticLineStix(
+            ds=ds, river_level=5.0, polder_level=-1.5, surface_offset=0.1
+        )
         ds = alg.execute()
         ds.serialize("tests/testdata/output/sand_on_clay_phreatic_line.stix")
