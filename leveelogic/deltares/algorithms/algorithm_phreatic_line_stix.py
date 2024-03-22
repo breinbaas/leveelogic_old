@@ -59,10 +59,8 @@ class AlgorithmPhreaticLineStix(Algorithm):
 
         Ax, Az = intersections[0]
 
-        # point B.x = embankment top waterside
-        Bx = ds.get_characteristic_point(
-            CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE
-        ).x
+        # point B.x = A.x + 1.0
+        Bx = Ax + 1.0
         # point B.z = A.z - B_offset (defaults to 1.0)
         Bz = Az - self.B_offset
 
@@ -113,18 +111,20 @@ class AlgorithmPhreaticLineStix(Algorithm):
             intersections = line_polyline_intersections(
                 ds.left, self.polder_level, ds.right, self.polder_level, ds.ditch_points
             )
-            if len(intersections) > 0:
+            if intersections is not None and len(intersections) > 0:
                 Fx, Fz = intersections[0]
 
         ds.set_phreatic_line(
-            (ds.left, self.river_level),
-            (Ax, Az),
-            (Bx, Bz),
-            (Cx, Cz),
-            (Dx, Dz),
-            (Ex, Ez),
-            (Fx, Fz),
-            (ds.right, self.polder_level),
+            [
+                (ds.left, self.river_level),
+                (Ax, Az),
+                (Bx, Bz),
+                (Cx, Cz),
+                (Dx, Dz),
+                (Ex, Ez),
+                (Fx, Fz),
+                (ds.right, self.polder_level),
+            ]
         )
 
     def _execute_sand_layout(self, ds: DStability) -> DStability:
