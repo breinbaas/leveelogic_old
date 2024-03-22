@@ -43,10 +43,19 @@ class AlgorithmPhreaticLineStix(Algorithm):
             raise AlgorithmInputCheckError(
                 "The point for the embankment toe landside is not defined in the Waternet creator settings."
             )
+        if not self.ds.get_characteristic_point(
+            CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE
+        ).is_valid:
+            raise AlgorithmInputCheckError(
+                "The point for the embankment toe waterside is not defined in the Waternet creator settings."
+            )
 
         return True
 
-    def _execute_clay_layout(self, ds: DStability) -> DStability:
+    def _execute_sand_on_sand_layout(self, ds: DStability) -> List[Tuple[float, float]]:
+        raise NotImplementedError()
+
+    def _execute_clay_layout(self, ds: DStability) -> List[Tuple[float, float]]:
         # point A = intersection levee and river level
         intersections = line_polyline_intersections(
             ds.left, self.river_level, ds.right, self.river_level, ds.surface
@@ -59,10 +68,8 @@ class AlgorithmPhreaticLineStix(Algorithm):
 
         Ax, Az = intersections[0]
 
-        # point B.x = embankment top waterside
-        Bx = ds.get_characteristic_point(
-            CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE
-        ).x
+        # point B.x = A.x + 1
+        Bx = Ax + 1.0
         # point B.z = A.z - B_offset (defaults to 1.0)
         Bz = Az - self.B_offset
 
@@ -113,32 +120,95 @@ class AlgorithmPhreaticLineStix(Algorithm):
             intersections = line_polyline_intersections(
                 ds.left, self.polder_level, ds.right, self.polder_level, ds.ditch_points
             )
-            if len(intersections) > 0:
+            if intersections is not None and len(intersections) > 0:
                 Fx, Fz = intersections[0]
 
-        ds.set_phreatic_line(
-            (ds.left, self.river_level),
-            (Ax, Az),
-            (Bx, Bz),
-            (Cx, Cz),
-            (Dx, Dz),
-            (Ex, Ez),
-            (Fx, Fz),
-            (ds.right, self.polder_level),
+        return [(Ax, Az), (Bx, Bz), (Cx, Cz), (Dx, Dz), (Ex, Ez), (Fx, Fz)]
+
+    def _execute_sand_on_clay_layout(self, ds: DStability) -> List[Tuple[float, float]]:
+        # point A = intersection levee and river level
+        intersections = line_polyline_intersections(
+            ds.left, self.river_level, ds.right, self.river_level, ds.surface
         )
 
-    def _execute_sand_layout(self, ds: DStability) -> DStability:
-        raise NotImplementedError()
+        if len(intersections) == 0:
+            raise AlgorithmExecutionError(
+                f"No intersection with the surface and the given river level ({self.river_level}) found."
+            )
+
+        Ax, Az = intersections[0]
+
+        # point B.x = A.x
+        Bx = Ax
+        # point B.z = A.z - 0.5 * (Az - dike toe at polder.z)
+        px = ds.get_characteristic_point(
+            CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE
+        ).x
+        pz = ds.z_at(px)[0]
+        Bz = Az - 0.5 * (Az - pz)
+
+        # point E = embankment toe land side
+        Ex = ds.get_characteristic_point(
+            CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE
+        ).x
+        # E.z = surface + 0.25 * (Az - surface)
+        Ez = ds.z_at(Ex)[0] - self.E_offset
+        Ez = Ez + 0.25 * (Az - Ez)
+
+        # point C.x = embankment top landside, z = interpolation B-E
+        Cx = ds.get_characteristic_point(
+            CharacteristicPointType.EMBANKEMENT_TOP_LAND_SIDE
+        ).x
+        Cz = Bz + (Cx - Bx) / (Ex - Bx) * (Ez - Bz)
+
+        # point D depends on the shoulder coordinate
+        # if not available use the midpoint between C and E
+        # if available use that point
+        shoulder_point = ds.get_characteristic_point(
+            CharacteristicPointType.SHOULDER_BASE_LAND_SIDE
+        )
+        if shoulder_point.is_valid:
+            Dx = shoulder_point.x
+        else:
+            Dx = (Ex + Cx) / 2.0
+
+        Dz = Cz + (Dx - Cx) / (Ex - Cx) * (Ez - Cz)
+        Fz = self.polder_level
+        Fx = Ex + (Ez - Fz) * (Ex - Dx) / (Ez - Dz)
+
+        if Fx > ds.right:
+            Fx = ds.right - 0.01
+            Fz = self.polder_level
+
+        if len(ds.ditch_points) > 0:
+            intersections = line_polyline_intersections(
+                ds.left, self.polder_level, ds.right, self.polder_level, ds.ditch_points
+            )
+            if intersections is not None and len(intersections) > 0:
+                Fx, Fz = intersections[0]
+
+        return [(Ax, Az), (Bx, Bz), (Cx, Cz), (Dx, Dz), (Ex, Ez), (Fx, Fz)]
 
     def _execute(self) -> DStability:
         ds = deepcopy(self.ds)
+
+        abcdef = []  # points A B C D E and F
 
         if (
             ds.material_layout == MaterialLayoutType.CLAY_EMBANKEMENT_ON_CLAY
             or ds.material_layout == MaterialLayoutType.CLAY_EMBANKEMENT_ON_SAND
         ):
-            self._execute_clay_layout(ds)
+            abcdef = self._execute_clay_layout(ds)
+        elif ds.material_layout == MaterialLayoutType.SAND_EMBANKEMENT_ON_CLAY:
+            abcdef = self._execute_sand_on_clay_layout(ds)
         else:
-            self._execute_sand_layout(ds)
+            abcdef = self._execute_sand_on_sand_layout(ds)
 
+        # TODO > zorgen dat de freatische lijn niet boven het maaiveld uitkomt tussen punt C en E/F
+
+        plline_points = (
+            [(ds.left, self.river_level)] + abcdef + [(ds.right, self.polder_level)]
+        )
+
+        ds.set_phreatic_line(plline_points)
         return ds

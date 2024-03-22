@@ -321,9 +321,9 @@ class DStability(BaseModel):
         if p1.is_valid and p2.is_valid and p3.is_valid and p4.is_valid:
             return [
                 (p1.x, self.z_at(p1.x)[0]),
-                (p2.x, self.z_at(p1.x)[0]),
-                (p3.x, self.z_at(p1.x)[0]),
-                (p4.x, self.z_at(p1.x)[0]),
+                (p2.x, self.z_at(p2.x)[0]),
+                (p3.x, self.z_at(p3.x)[0]),
+                (p4.x, self.z_at(p4.x)[0]),
             ]
         else:
             return []
