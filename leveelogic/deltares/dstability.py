@@ -57,8 +57,8 @@ class DStability(BaseModel):
     name: str = ""
     characteristic_points: List[CharacteristicPoint] = []
     model: DStabilityModel = DStabilityModel()
-    current_scenario_index: int = 0
-    current_stage_index: int = 0
+    current_scenario_index: int = -1
+    current_stage_index: int = -1
     soillayers: List[Dict] = []
     soils: Dict = {}
     headlines: List[Dict] = []
@@ -165,12 +165,13 @@ class DStability(BaseModel):
                     )
                     result.model.parse(Path(stix_file))
                 except Exception as e:
-                    raise e
+                    raise ValueError(
+                        f"Could not upgrade the file, got error '{e}', maybe you are missing the .env file with the DSTABILITY_MIGRATION_CONSOLE_PATH path?"
+                    )
             else:
                 raise e
 
         result.set_scenario_and_stage(0, 0)
-        result._post_process()
         return result
 
     @property
@@ -216,9 +217,9 @@ class DStability(BaseModel):
         Returns:
             Optional[PersistableHeadLine]: The preathic line or None if not set
         """
-        waternet = self.model.waternets[
-            0
-        ]  # [0] is that correct? don't think so! should depend on the current geom
+        waternet = self.model._get_waternet(
+            self.current_scenario_index, self.current_stage_index
+        )
         for headline in waternet.HeadLines:
             if headline.Id == waternet.PhreaticLineId:
                 return headline
@@ -254,7 +255,9 @@ class DStability(BaseModel):
 
     @property
     def material_layout(self) -> MaterialLayoutType:
-        wns = self.model.datastructure.waternetcreatorsettings[0]
+        wns = self.model.datastructure._get_waternetcreator_settings(
+            self.current_scenario_index, self.current_stage_index
+        )
         if (
             wns.EmbankmentSoilScenario
             == EmbankmentSoilScenarioEnum.CLAY_EMBANKMENT_ON_CLAY
@@ -320,10 +323,10 @@ class DStability(BaseModel):
 
         if p1.is_valid and p2.is_valid and p3.is_valid and p4.is_valid:
             return [
-                (p1.x, self.z_at(p1.x)[0]),
-                (p2.x, self.z_at(p2.x)[0]),
-                (p3.x, self.z_at(p3.x)[0]),
-                (p4.x, self.z_at(p4.x)[0]),
+                (p1.x, self.z_at(p1.x)),
+                (p2.x, self.z_at(p2.x)),
+                (p3.x, self.z_at(p3.x)),
+                (p4.x, self.z_at(p4.x)),
             ]
         else:
             return []
@@ -379,7 +382,9 @@ class DStability(BaseModel):
         self, point_type: CharacteristicPointType
     ) -> CharacteristicPoint:
         # karakteristieke punten
-        wns = self.model.datastructure.waternetcreatorsettings[0]
+        wns = wns = self.model.datastructure._get_waternetcreator_settings(
+            self.current_scenario_index, self.current_stage_index
+        )
 
         if point_type == CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE:
             if wns.EmbankmentCharacteristics.EmbankmentToeWaterSide is not "NaN":
@@ -489,7 +494,9 @@ class DStability(BaseModel):
             )
 
     def get_headline_by_label(self, label: str = "") -> PersistableHeadLine:
-        for hl in self.model.waternets[0].HeadLines:
+        for hl in self.model._get_waternet(
+            self.current_scenario_index, self.current_stage_index
+        ).HeadLines:
             if hl.Label == label:
                 return hl
         raise ValueError(f"No headline with label '{label}' in this model.")
@@ -503,7 +510,9 @@ class DStability(BaseModel):
         Returns:
             List[Tuple[float, float]]: List of points of the given headline
         """
-        for hl in self.model.waternets[0].HeadLines:
+        for hl in self.model._get_waternet(
+            self.current_scenario_index, self.current_stage_index
+        ).HeadLines:
             if hl.Label == label:
                 return [(float(p.X), float(p.Z)) for p in hl.Points]
 
@@ -516,7 +525,9 @@ class DStability(BaseModel):
             label (str): Label of the headline
             coords (List[Tuple[float, float]]): New coordinates
         """
-        for hl in self.model.waternets[0].HeadLines:
+        for hl in self.model._get_waternet(
+            self.current_scenario_index, self.current_stage_index
+        ).HeadLines:
             if hl.Label == label:
                 if len(coords) > len(hl.Points):
                     raise ValueError(
@@ -572,9 +583,20 @@ class DStability(BaseModel):
         # 1. check if we already have a phreatic line
         if self.has_phreatic_line:
             points = [PersistablePoint(X=p[0], Z=p[1]) for p in points]
-            for i, hl in enumerate(self.model.datastructure.waternets[0].HeadLines):
-                if hl.Id == self.model.datastructure.waternets[0].PhreaticLineId:
-                    self.model.datastructure.waternets[0].HeadLines[i].Points = points
+            for i, hl in enumerate(
+                self.model._get_waternet(
+                    self.current_scenario_index, self.current_stage_index
+                ).HeadLines
+            ):
+                if (
+                    hl.Id
+                    == self.model._get_waternet(
+                        self.current_scenario_index, self.current_stage_index
+                    ).PhreaticLineId
+                ):
+                    self.model._get_waternet(
+                        self.current_scenario_index, self.current_stage_index
+                    ).HeadLines[i].Points = points
                     break
         else:
             self.model.add_head_line(
@@ -600,6 +622,7 @@ class DStability(BaseModel):
         self.points = []
         self.boundary = []
         self.surface = []
+        self.headlines = []
 
         soilcolors = {
             sv.SoilId: sv.Color[:1] + sv.Color[3:]  # remove the alpha part
@@ -646,7 +669,9 @@ class DStability(BaseModel):
                 ] = soil.MohrCoulombAdvancedShearStrengthModel.FrictionAngle
 
         soillayers = {}
-        for sl in self.model.datastructure.soillayers[0].SoilLayers:
+        for sl in self.model.datastructure._get_soil_layers(
+            self.current_scenario_index, self.current_stage_index
+        ).SoilLayers:
             soillayers[sl.LayerId] = sl.SoilId
 
         for layer in layers:
@@ -694,7 +719,9 @@ class DStability(BaseModel):
         self.surface = self.surface[: idx_right + 1]
 
         # headlines
-        for hl in self.model.waternets[0].HeadLines:
+        for hl in self.model._get_waternet(
+            self.current_scenario_index, self.current_stage_index
+        ).HeadLines:
             self.headlines.append(
                 {
                     "label": hl.Label,
@@ -728,7 +755,7 @@ class DStability(BaseModel):
         """
         return [p for p in self.surface if p[0] > left and p[0] < right]
 
-    def set_scenario_and_stage(self, scenario_index: int, stage_index: int):
+    def set_scenario_and_stage(self, scenario_index: int, stage_index: int) -> None:
         """Set the current scenario and stage
 
         Args:
@@ -749,6 +776,40 @@ class DStability(BaseModel):
             raise ValueError(
                 f"Trying to set an invalid stage index for scenario {self.current_scenario_index}"
             )
+
+        self._post_process()
+
+    def set_scenario_and_stage_by_name(
+        self, scenario_name: str, stage_name: str
+    ) -> None:
+        """Set the scenario and stage by name
+
+        Args:
+            scenario_name (str): Scenario name (case insensitive)
+            stage_name (str): Stage name (case insensitive)
+
+        Raises:
+            ValueError: raise error if the stage name or scenario name is not found
+        """
+        scenario_index = -1
+        selected_scenario = None
+        for i, scenario in enumerate(self.model.scenarios):
+            if scenario.Label.lower() == scenario_name.lower():
+                scenario_index = i
+                selected_scenario = scenario
+                break
+
+        if scenario_index == -1:
+            raise ValueError(f"Calculation has no scenario named '{scenario_name}'")
+
+        for i, stage in enumerate(selected_scenario.Stages):
+            if stage.Label.lower() == stage_name.lower():
+                self.set_scenario_and_stage(scenario_index, i)
+                return
+
+        raise ValueError(
+            f"Calculation scenario '{scenario_name}' has no stage named '{stage_name}'"
+        )
 
     def soilprofile1_at(
         self, x: float, scenario_index: int = 0, stage_index: int = 0
@@ -817,19 +878,30 @@ class DStability(BaseModel):
         result.soillayers[-1].bottom = -999.0
         return result
 
-    def z_at(self, x, scenario_index: int = 0, stage_index: int = 0) -> List[float]:
+    def z_at(
+        self,
+        x,
+        highest_only: bool = True,
+    ) -> List[float]:
         """Get a list of z coordinates from intersections with the soillayers on coordinate x
 
         Args:
             x (_type_): The x coordinate
             scenario_index (int, optional): The scenario index. Defaults to 0.
             stage_index (int, optional): The stage index. Defaults to 0.
+            highest_only (bool): Only return the topmost point. Defaults to True
 
         Returns:
-            List[float]: A list of intersections sorted from high to low
+            List[float]: A list of intersections sorted from high to low or only the highest point if highest_only is True
         """
-        sp1 = self.soilprofile1_at(x, scenario_index, stage_index)
-        return [sl.top for sl in sp1.soillayers]
+        sp1 = self.soilprofile1_at(
+            x, self.current_scenario_index, self.current_stage_index
+        )
+
+        if highest_only:
+            return sp1.top
+        else:
+            return [sl.top for sl in sp1.soillayers]
 
     def has_soilcode(self, soilcode: str) -> bool:
         """Check if the current model has the given soilcode
@@ -914,10 +986,10 @@ class DStability(BaseModel):
             )
         return result
 
-    def get_analysis_type(
-        self, scenario_index: int = 0, stage_index: int = 0
-    ) -> AnalysisTypeEnum:
-        cs = self.model._get_calculation_settings(scenario_index, stage_index)
+    def get_analysis_type(self) -> AnalysisTypeEnum:
+        cs = self.model._get_calculation_settings(
+            self.current_scenario_index, self.current_stage_index
+        )
         return cs.AnalysisType
 
     def safety_factor_to_dict(self, scenario_index: int = 0, stage_index: int = 0):

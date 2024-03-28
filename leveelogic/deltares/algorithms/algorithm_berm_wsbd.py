@@ -116,7 +116,7 @@ class AlgorithmBermWSBD(Algorithm):
 
         p1 = (
             self.embankement_toe_land_side,
-            ds.z_at(self.embankement_toe_land_side)[0],
+            ds.z_at(self.embankement_toe_land_side),
         )
         if self.fixed_x is not None and self.fixed_z is not None:
             # the topright point of the berm is defined so now find out the intersections based on the slopes

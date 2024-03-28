@@ -2359,6 +2359,18 @@ class DStabilityStructure(BaseModelStructure):
                 return True
         return False
 
+    def _get_waternetcreator_settings(self, scenario_index: int, stage_index: int):
+        wncs_id = (
+            self.scenarios[scenario_index].Stages[stage_index].WaternetCreatorSettingsId
+        )
+        for wncs in self.waternetcreatorsettings:
+            if wncs.Id == wncs_id:
+                return wncs
+
+        raise ValueError(
+            f"No waternet creator settings found for stage {stage_index} in scenario {scenario_index}."
+        )
+
     def _get_soil_layers(self, scenario_index: int, stage_index: int):
         soil_layers_id = self.scenarios[scenario_index].Stages[stage_index].SoilLayersId
 

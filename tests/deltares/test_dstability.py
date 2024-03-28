@@ -65,3 +65,24 @@ class TestDStability:
     def test_soilprofile1_at(self):
         ds = DStability.from_stix("tests/testdata/stix/fc_pl_sample.stix")
         sp1 = ds.soilprofile1_at(x=256)
+
+    def test_set_scenario_and_stage_by_name(self):
+        ds = DStability.from_stix("tests/testdata/stix/scenarios_and_stages.stix")
+        with pytest.raises(ValueError):
+            ds.set_scenario_and_stage_by_name("NotOnMyWatch", "OrMine")
+        ds.set_scenario_and_stage_by_name("Norm", "Norm")
+        assert ds.current_scenario_index == 1
+        assert ds.current_stage_index == 1
+        ds.set_scenario_and_stage_by_name("dagelijks", "dagelijks")
+        assert ds.current_scenario_index == 0
+        assert ds.current_stage_index == 0
+        ds.set_scenario_and_stage_by_name("norm", "dagelijks")
+        assert ds.current_scenario_index == 1
+        assert ds.current_stage_index == 0
+
+    def test_scenarios_and_stages(self):
+        ds = DStability.from_stix("tests/testdata/stix/scenarios_and_stages.stix")
+        ds.set_scenario_and_stage_by_name("Norm", "Norm")
+        assert ds.phreatic_line.Points[0].Z == "3.04"
+        ds.set_scenario_and_stage_by_name("Dagelijks", "dagelijks")
+        assert ds.phreatic_line.Points[0].Z == "0.67"

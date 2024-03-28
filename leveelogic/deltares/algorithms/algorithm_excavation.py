@@ -30,8 +30,8 @@ class AlgorithmExcavation(Algorithm):
 
         x1 = self.x - self.width / 2.0
         x2 = self.x + self.width / 2.0
-        z1 = ds.z_at(x1)[0]
-        z2 = ds.z_at(x2)[0]
+        z1 = ds.z_at(x1)
+        z2 = ds.z_at(x2)
 
         excavation_points = [Point(x=x1, z=z1), Point(x=x1, z=z1 - self.depth)]
         # follow the surface from x1 to x2 and get the intermediate points

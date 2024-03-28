@@ -37,7 +37,7 @@ class AlgorithmTree(Algorithm):
 
     def _execute(self) -> DStability:
         ds = deepcopy(self.ds)
-        z = round(ds.z_at(self.x)[0], 2)
+        z = round(ds.z_at(self.x), 2)
         ds.model.add_load(
             TreeLoad(
                 tree_top_location=Point(x=self.x, z=z + self.tree_height),

@@ -9,7 +9,7 @@ from ...geolib.models.dstability.internal import (
     PersistableSlipPlaneConstraints,
 )
 
-from .algorithm import Algorithm, AlgorithmInputCheckError
+from .algorithm import Algorithm, AlgorithmInputCheckError, AlgorithmExecutionError
 from ..dstability import DStability
 from ...geometry.characteristic_point import CharacteristicPointType
 
@@ -58,8 +58,8 @@ class AlgorithmAddCalculationSettings(Algorithm):
             x_toe_landside = self.ds.get_characteristic_point(
                 CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE
             ).x
-            z_top_landside = self.ds.z_at(x_top_landside)[0]
-            z_toe_landside = self.ds.z_at(x_toe_landside)[0]
+            z_top_landside = self.ds.z_at(x_top_landside)
+            z_toe_landside = self.ds.z_at(x_toe_landside)
             if self.bbf_height is None:
                 self.bbf_height = x_toe_landside - x_top_landside
             if self.bbf_width is None:
@@ -74,10 +74,21 @@ class AlgorithmAddCalculationSettings(Algorithm):
             if self.bbf_tangent_height is None:
                 self.bbf_tangent_height = DEFAULT_TANGENT_HEIGHT
 
-            # set the calculation settings
-            # Grid
+            cs_index = -1
+            for i, cs in enumerate(ds.model.datastructure.calculationsettings):
+                if cs == ds.model._get_calculation_settings(
+                    ds.current_scenario_index, ds.current_stage_index
+                ):
+                    cs_index = i
+                    break
+
+            if cs_index == -1:
+                raise AlgorithmExecutionError(
+                    f"Could not find the necessary calculationsettings for scenario {ds.current_scenario_index} and stage {ds.current_stage_index}."
+                )
+
             ds.model.datastructure.calculationsettings[
-                0
+                cs_index
             ].BishopBruteForce.SearchGrid = PersistableSearchGrid(
                 BottomLeft=NullablePersistablePoint(
                     X=self.bbf_bottomleft[0], Z=self.bbf_bottomleft[1]
@@ -89,7 +100,7 @@ class AlgorithmAddCalculationSettings(Algorithm):
             )
             # Tangent lines
             ds.model.datastructure.calculationsettings[
-                0
+                cs_index
             ].BishopBruteForce.TangentLines = PersistableTangentLines(
                 BottomTangentLineZ=z_toe_landside - 1.0 - self.bbf_tangent_height,
                 Label="added by leveelogic algorithm",
@@ -104,7 +115,7 @@ class AlgorithmAddCalculationSettings(Algorithm):
                 and self.bbf_min_slipplane_length == 0.0
             ):
                 ds.model.datastructure.calculationsettings[
-                    0
+                    cs_index
                 ].BishopBruteForce.SlipPlaneConstraints = PersistableSlipPlaneConstraints(
                     IsSizeConstraintsEnabled=False,
                     MinimumSlipPlaneDepth=0.0,
@@ -112,7 +123,7 @@ class AlgorithmAddCalculationSettings(Algorithm):
                 )
             else:
                 ds.model.datastructure.calculationsettings[
-                    0
+                    cs_index
                 ].BishopBruteForce.SlipPlaneConstraints = PersistableSlipPlaneConstraints(
                     IsSizeConstraintsEnabled=True,
                     MinimumSlipPlaneDepth=self.bbf_min_circle_depth,

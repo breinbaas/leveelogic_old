@@ -86,7 +86,7 @@ class AlgorithmPhreaticLineStix(Algorithm):
             CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE
         ).x
         # E.z = surface minus E_offset (defaults to 0.0)
-        Ez = ds.z_at(Ex)[0] - self.E_offset
+        Ez = ds.z_at(Ex) - self.E_offset
 
         # point D depends on the shoulder coordinate
         # if not available use the midpoint between C and E
@@ -104,7 +104,7 @@ class AlgorithmPhreaticLineStix(Algorithm):
         if self.D_offset is None:
             Dz = Cz + (Dx - Cx) / (Ex - Cx) * (Ez - Cz)
         else:
-            Dz = ds.z_at(Dx)[0] - self.D_offset
+            Dz = ds.z_at(Dx) - self.D_offset
 
         # point F is the intersection with the ditch (if available)
         # at the level of the polder_level
@@ -145,7 +145,7 @@ class AlgorithmPhreaticLineStix(Algorithm):
         px = ds.get_characteristic_point(
             CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE
         ).x
-        pz = ds.z_at(px)[0]
+        pz = ds.z_at(px)
         Bz = Az - 0.5 * (Az - pz)
 
         # point E = embankment toe land side
@@ -153,7 +153,7 @@ class AlgorithmPhreaticLineStix(Algorithm):
             CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE
         ).x
         # E.z = surface + 0.25 * (Az - surface)
-        Ez = ds.z_at(Ex)[0] - self.E_offset
+        Ez = ds.z_at(Ex) - self.E_offset
         Ez = Ez + 0.25 * (Az - Ez)
 
         # point C.x = embankment top landside, z = interpolation B-E
@@ -228,7 +228,7 @@ class AlgorithmPhreaticLineStix(Algorithm):
         # now check the height for all points between C and (including) F
         for i in range(len(plpoints)):
             if plpoints[i][0] > abcdef[2][0] and plpoints[i][0] <= abcdef[-1][0]:
-                z_surface = ds.z_at(plpoints[i][0])[0]
+                z_surface = ds.z_at(plpoints[i][0])
                 if plpoints[i][1] > z_surface - self.surface_offset:
                     plpoints[i][1] = z_surface - self.surface_offset
                 # but don't go higher than the previous point
