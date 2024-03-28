@@ -1,15 +1,19 @@
 from copy import deepcopy
 from math import isnan, nan
 import numpy as np
-from typing import List
+from typing import List, Optional
 
 from ...geolib.geometry import Point
 from ..dstability import DStability
 from .algorithm import Algorithm, AlgorithmInputCheckError
 from ...helpers import polyline_polyline_intersections
+from ...geometry.characteristic_point import (
+    CharacteristicPoint,
+    CharacteristicPointType,
+)
 
 
-class AlgorithmBermWSBD(Algorithm):
+class AlgorithmBerm(Algorithm):
     soilcode: str = ""
     slope_top: float = 10.0
     slope_bottom: float = 1.0
@@ -22,12 +26,6 @@ class AlgorithmBermWSBD(Algorithm):
     fill_ditch: bool = False
     ditch_soilcode: str = None
 
-    embankement_toe_land_side: float = nan
-    ditch_embankement_side: float = nan
-    # ditch_bottom_embankement_side: float = nan
-    # ditch_bottom_land_side: float = nan
-    ditch_land_side: float = nan
-
     def _check_input(self):
         # if we are using the algorithm to not only fill the ditch do we have this soilcode for the berm?
         if self.width > 0 or self.fixed_x is not None:
@@ -36,30 +34,48 @@ class AlgorithmBermWSBD(Algorithm):
                     f"AlgorithmBermWSBD got an invalid soilcode '{self.soilcode}'"
                 )
 
-            # do we have the toe char point?
-            try:
-                self.embankement_toe_land_side = float(
-                    self.ds.model.datastructure.waternetcreatorsettings[
-                        0
-                    ].EmbankmentCharacteristics.EmbankmentToeLandSide
-                )
-            except:
+            # We need the embankment toe char point
+            embankement_toe_land_side = self.ds.get_characteristic_point(
+                CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE
+            )
+            if (
+                embankement_toe_land_side is None
+                or not embankement_toe_land_side.is_valid
+            ):
                 raise AlgorithmInputCheckError(
                     "The given stix file has no waternet creator settings where the embankment toe land side point is set which is required for this algorithm to run."
                 )
 
-        # Ditch information, maybe for later
-        if (
-            not self.ds.model.datastructure.waternetcreatorsettings[
-                0
-            ].DitchCharacteristics.DitchEmbankmentSide
-            == "NaN"
-        ):
-            self.ditch_embankement_side = float(
-                self.ds.model.datastructure.waternetcreatorsettings[
-                    0
-                ].DitchCharacteristics.DitchEmbankmentSide
+        # if we want to fill the ditch we need to know the ditch points
+        if self.fill_ditch:
+            ditch_embankment_side = self.ds.get_characteristic_point(
+                CharacteristicPointType.DITCH_EMBANKEMENT_SIDE
             )
+            if (ditch_embankment_side) is None or not ditch_embankment_side.is_valid:
+                raise AlgorithmInputCheckError(
+                    "You want to fill the ditch but the ditch embankment side point is not given."
+                )
+
+            ditch_land_side = self.ds.get_characteristic_point(
+                CharacteristicPointType.DITCH_LAND_SIDE
+            )
+            if (ditch_land_side) is None or not ditch_land_side.is_valid:
+                raise AlgorithmInputCheckError(
+                    "You want to fill the ditch but the ditch land side point is not given."
+                )
+
+        # # Ditch information, maybe for later
+        # if (
+        #     not self.ds.model.datastructure.waternetcreatorsettings[
+        #         0
+        #     ].DitchCharacteristics.DitchEmbankmentSide
+        #     == "NaN"
+        # ):
+        #     self.ditch_embankement_side = float(
+        #         self.ds.model.datastructure.waternetcreatorsettings[
+        #             0
+        #         ].DitchCharacteristics.DitchEmbankmentSide
+        #     )
 
         # MAYBE FOR PL REASONS
         # self.ditch_bottom_embankement_side = float(
@@ -72,42 +88,59 @@ class AlgorithmBermWSBD(Algorithm):
         #         0
         #     ].DitchCharacteristics.DitchBottomLandSide
         # )
-        if (
-            not self.ds.model.datastructure.waternetcreatorsettings[
-                0
-            ].DitchCharacteristics.DitchLandSide
-            == "NaN"
-        ):
-            self.ditch_land_side = float(
-                self.ds.model.datastructure.waternetcreatorsettings[
-                    0
-                ].DitchCharacteristics.DitchLandSide
-            )
+        # if (
+        #     not self.ds.model.datastructure.waternetcreatorsettings[
+        #         0
+        #     ].DitchCharacteristics.DitchLandSide
+        #     == "NaN"
+        # ):
+        #     self.ditch_land_side = float(
+        #         self.ds.model.datastructure.waternetcreatorsettings[
+        #             0
+        #         ].DitchCharacteristics.DitchLandSide
+        #     )
 
-        if self.fill_ditch:
-            if isnan(self.ditch_embankement_side) or isnan(self.ditch_land_side):
-                raise AlgorithmInputCheckError(
-                    "Cannot fill the ditch since the ditch embankement side and/or the ditch land side points are missing."
-                )
-            if self.ditch_soilcode is None:
-                raise AlgorithmInputCheckError(
-                    "Cannot fill the ditch since the ditch soilcode is not set."
-                )
-            if not self.ds.has_soilcode(self.ditch_soilcode):
-                raise AlgorithmInputCheckError(
-                    f"Cannot fill the ditch since the ditch soilcode ('{self.ditch_soilcode}') is not valid."
-                )
+        # if self.fill_ditch:
+        #     if isnan(self.ditch_embankement_side) or isnan(self.ditch_land_side):
+        #         raise AlgorithmInputCheckError(
+        #             "Cannot fill the ditch since the ditch embankement side and/or the ditch land side points are missing."
+        #         )
+        #     if self.ditch_soilcode is None:
+        #         raise AlgorithmInputCheckError(
+        #             "Cannot fill the ditch since the ditch soilcode is not set."
+        #         )
+        #     if not self.ds.has_soilcode(self.ditch_soilcode):
+        #         raise AlgorithmInputCheckError(
+        #             f"Cannot fill the ditch since the ditch soilcode ('{self.ditch_soilcode}') is not valid."
+        #         )
 
     def _execute(self) -> DStability:
         ds = deepcopy(self.ds)
 
+        embankement_toe_land_side = self.ds.get_characteristic_point(
+            CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE
+        ).x
+
         if self.fill_ditch:
-            fp1 = self.ds.get_closest_point_from_x(self.ditch_embankement_side)
-            fp2 = self.ds.get_closest_point_from_x(self.ditch_land_side)
+            ditch_embankement_side = self.ds.get_characteristic_point(
+                CharacteristicPointType.DITCH_EMBANKEMENT_SIDE
+            ).x
+            ditch_land_side = self.ds.get_characteristic_point(
+                CharacteristicPointType.DITCH_LAND_SIDE
+            ).x
+
+            fp1 = self.ds.get_closest_point_from_x(ditch_embankement_side)
+            fp2 = self.ds.get_closest_point_from_x(ditch_land_side)
             fp_points = [fp1, fp2] + self.ds.surface_points_between(fp1[0], fp2[0])[
                 ::-1
             ]
-            ds.add_layer(fp_points, self.ditch_soilcode, label="ditch fill")
+            ds.add_layer(
+                fp_points,
+                self.ditch_soilcode,
+                label="ditch fill",
+                scenario_index=ds.current_scenario_index,
+                stage_index=ds.current_stage_index,
+            )
 
         # the algorithm could be used to only fill the ditch
         # in this case the height width can be zero and the fixed coords not set
@@ -115,8 +148,8 @@ class AlgorithmBermWSBD(Algorithm):
             return ds
 
         p1 = (
-            self.embankement_toe_land_side,
-            ds.z_at(self.embankement_toe_land_side),
+            embankement_toe_land_side,
+            ds.z_at(embankement_toe_land_side),
         )
         if self.fixed_x is not None and self.fixed_z is not None:
             # the topright point of the berm is defined so now find out the intersections based on the slopes
@@ -126,23 +159,22 @@ class AlgorithmBermWSBD(Algorithm):
             )
             p4 = (
                 ds.right,
-                self.fixed_z
-                - (ds.right - self.embankement_toe_land_side) / self.slope_top,
+                self.fixed_z - (ds.right - embankement_toe_land_side) / self.slope_top,
             )
         elif self.width > 0 and self.height > 0:
             # toe of the levee
 
             # toe of the levee plus the initial height
-            p2 = (self.embankement_toe_land_side, p1[1] + self.height)
+            p2 = (embankement_toe_land_side, p1[1] + self.height)
             # left most points based on slope s1
             p3 = (
                 ds.left,
-                p2[1] + (self.embankement_toe_land_side - ds.left) / self.slope_top,
+                p2[1] + (embankement_toe_land_side - ds.left) / self.slope_top,
             )
             #  rightmost point based on slope s1
             p4 = (
                 ds.right,
-                p2[1] - (ds.right - self.embankement_toe_land_side) / self.slope_top,
+                p2[1] - (ds.right - embankement_toe_land_side) / self.slope_top,
             )
 
         else:
@@ -209,6 +241,11 @@ class AlgorithmBermWSBD(Algorithm):
             # now follow the surface back to p1
             points += ds.surface_points_between(p1[0], p2[0])[::-1]
 
-            ds.add_layer(points, self.soilcode)
+            ds.add_layer(
+                points,
+                self.soilcode,
+                scenario_index=ds.current_scenario_index,
+                stage_index=ds.current_stage_index,
+            )
 
         return ds

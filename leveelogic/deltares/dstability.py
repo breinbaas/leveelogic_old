@@ -380,7 +380,7 @@ class DStability(BaseModel):
 
     def get_characteristic_point(
         self, point_type: CharacteristicPointType
-    ) -> CharacteristicPoint:
+    ) -> Optional[CharacteristicPoint]:
         # karakteristieke punten
         wns = wns = self.model.datastructure._get_waternetcreator_settings(
             self.current_scenario_index, self.current_stage_index
@@ -489,9 +489,7 @@ class DStability(BaseModel):
                 )
 
         else:
-            raise ValueError(
-                f"Invalid characteristic point type ({point_type}) requested"
-            )
+            return None
 
     def get_headline_by_label(self, label: str = "") -> PersistableHeadLine:
         for hl in self.model._get_waternet(
@@ -568,7 +566,7 @@ class DStability(BaseModel):
 
     def scenario_label(self, scenario_index: int) -> str:
         if scenario_index < len(self.model.scenarios):
-            return self.model.scenarios[0].Label
+            return self.model.scenarios[scenario_index].Label
         raise ValueError(f"Invalid scenario index {scenario_index}")
 
     def set_phreatic_line(self, points: List[Tuple[float, float]]):
