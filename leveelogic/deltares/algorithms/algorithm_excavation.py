@@ -43,6 +43,11 @@ class AlgorithmExcavation(Algorithm):
         excavation_points.append(Point(x=x2, z=z2))
 
         # finally.. we can add this excavation using the adjusted geolib version
-        ds.model.add_excavation(label="excavation", points=excavation_points)
+        ds.model.add_excavation(
+            label="excavation",
+            points=excavation_points,
+            scenario_index=ds.current_scenario_index,
+            stage_index=ds.current_stage_index,
+        )
 
         return ds

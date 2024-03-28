@@ -44,7 +44,9 @@ class AlgorithmTree(Algorithm):
                 wind_force=self.wind_force,
                 width_of_root_zone=self.width_of_root_zone,
                 angle_of_distribution=self.angle_of_distribution,
-            )
+            ),
+            scenario_index=ds.current_scenario_index,
+            stage_index=ds.current_stage_index,
         )
 
         if self.load > 0.0:
@@ -54,7 +56,9 @@ class AlgorithmTree(Algorithm):
                     magnitude=self.load,
                     angle=self.load_angle,
                     angle_of_distribution=self.angle_of_distribution,
-                )
+                ),
+                scenario_index=ds.current_scenario_index,
+                stage_index=ds.current_stage_index,
             )
 
         return ds

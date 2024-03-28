@@ -15,4 +15,17 @@ class TestAlgorithmTree:
             angle_of_distribution=30,
         )
         ds = alg.execute()
-        ds.serialize("tests/testdata/output/simple_geometry_tree_load.stix")
+
+        ds.set_scenario_and_stage(1, 0)
+        alg = AlgorithmTree(
+            ds=ds,
+            x=25.0,
+            tree_height=10.0,
+            width_of_root_zone=6.0,
+            load=10.0,
+            wind_force=15.0,
+            angle_of_distribution=30,
+        )
+        ds = alg.execute()
+
+        ds.serialize("tests/testdata/output/alg_tree_simple_geometry_bbf.stix")
