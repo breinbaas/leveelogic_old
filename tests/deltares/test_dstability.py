@@ -88,3 +88,14 @@ class TestDStability:
         assert ds.phreatic_line.Points[0].Z == "3.04"
         ds.set_scenario_and_stage_by_name("Dagelijks", "dagelijks")
         assert ds.phreatic_line.Points[0].Z == "0.67"
+
+    def test_add_stage_from_soilpolygons(self):
+        ds = DStability.from_stix("tests/testdata/stix/scenarios_and_stages.stix")
+        spgs = ds.stage_to_soilpolygons(scenario_index=0, stage_index=0)
+        ds.add_stage_from_soilpolygons(soilpolygons=spgs)
+        ds.serialize("tests/testdata/output/test_add_stage_from_soilpolygons.stix")
+
+    def test_stage_to_soilpolygons(self):
+        ds = DStability.from_stix("tests/testdata/stix/scenarios_and_stages.stix")
+        spg = ds.stage_to_soilpolygons()
+        assert len(spg) == 6

@@ -365,16 +365,14 @@ class DStability(BaseModel):
         soil_code: str,
         label: str = "",
         notes: str = "",
-        scenario_index: Optional[int] = None,
-        stage_index: Optional[int] = None,
     ) -> int:
         self.model.add_layer(
             [Point(x=p[0], z=p[1]) for p in points],
             soil_code,
             label,
             notes,
-            scenario_index,
-            stage_index,
+            scenario_index=self.current_scenario_index,
+            stage_index=self.current_stage_index,
         )
         self._post_process()
 
@@ -1030,3 +1028,34 @@ class DStability(BaseModel):
             raise ValueError(
                 f"Cannot convert the result of type '{type(sf) }' yet, for now limited to spencer genetic, bishop brute force, uplift particlr swarm"
             )
+
+    def stage_to_soilpolygons(
+        self, scenario_index: int = -1, stage_index: int = -1
+    ) -> List[SoilPolygon]:
+        if scenario_index == -1:
+            scenario_index = self.current_scenario_index
+        if stage_index == -1:
+            stage_index = self.current_stage_index
+
+        soilpolygons = []
+        for layer in self.model._get_geometry(scenario_index, stage_index).Layers:
+            soilpolygons.append(
+                SoilPolygon(
+                    points=[(p.X, p.Z) for p in layer.Points],
+                    soilcode=self.get_soil_from_layer_id(layer.Id)["code"],
+                )
+            )
+        return soilpolygons
+
+    def add_stage_from_soilpolygons(
+        self,
+        soilpolygons: List[SoilPolygon],
+        phreatic_line: List[Tuple[float, float]] = [],
+        label: str = "New Stage",
+    ):
+        self.current_stage_index = self.model.add_stage(
+            scenario_index=self.current_scenario_index, label=label
+        )
+
+        for spg in soilpolygons:
+            self.add_layer(spg.points, spg.soilcode, label=spg.soilcode)
