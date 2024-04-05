@@ -365,6 +365,7 @@ class DStability(BaseModel):
         soil_code: str,
         label: str = "",
         notes: str = "",
+        post_proces: bool = False,  # only post proces if all layers are added
     ) -> int:
         self.model.add_layer(
             [Point(x=p[0], z=p[1]) for p in points],
@@ -374,7 +375,8 @@ class DStability(BaseModel):
             scenario_index=self.current_scenario_index,
             stage_index=self.current_stage_index,
         )
-        self._post_process()
+        if post_proces:
+            self._post_process()
 
     def get_characteristic_point(
         self, point_type: CharacteristicPointType
@@ -1052,10 +1054,49 @@ class DStability(BaseModel):
         soilpolygons: List[SoilPolygon],
         phreatic_line: List[Tuple[float, float]] = [],
         label: str = "New Stage",
-    ):
+    ) -> int:
         self.current_stage_index = self.model.add_stage(
             scenario_index=self.current_scenario_index, label=label
         )
 
         for spg in soilpolygons:
             self.add_layer(spg.points, spg.soilcode, label=spg.soilcode)
+
+        self._post_process()
+        return self.current_stage_index
+
+    def copy_waternet(
+        self,
+        from_scenario_index: int,
+        from_stage_index: int,
+        to_scenario_index: int = -1,
+        to_stage_index: int = -1,
+    ):
+        if to_scenario_index == -1:
+            to_scenario_index = self.current_scenario_index
+        if to_stage_index == -1:
+            to_stage_index = self.current_stage_index
+
+        wnet_to_copy = self.model._get_waternet(from_scenario_index, from_stage_index)
+        phreatic_line_id = wnet_to_copy.PhreaticLineId
+
+        headline_ids = {}  # key = old headline id, value = new headline id
+        for headline in wnet_to_copy.HeadLines:
+            hl_id = self.model.add_head_line(
+                points=[Point(x=p.X, z=p.Z) for p in headline.Points],
+                label=headline.Label,
+                scenario_index=to_scenario_index,
+                stage_index=to_stage_index,
+                is_phreatic_line=headline.Id == phreatic_line_id,
+            )
+            headline_ids[headline.Id] = hl_id
+
+        for i, refline in enumerate(wnet_to_copy.ReferenceLines):
+            self.model.add_reference_line(
+                points=[Point(x=p.X, z=p.Z) for p in refline.Points],
+                bottom_headline_id=headline_ids[refline.BottomHeadLineId],
+                top_head_line_id=headline_ids[refline.TopHeadLineId],
+                scenario_index=to_scenario_index,
+                stage_index=to_stage_index,
+                label=f"RL {i+1}",
+            )

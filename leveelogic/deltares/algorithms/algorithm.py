@@ -20,6 +20,7 @@ class Algorithm(BaseModel, metaclass=abc.ABCMeta):
 
     ds: DStability
     log: List[str] = []
+    add_as_new_stage: bool = False
 
     def execute(self) -> DStability:
         try:

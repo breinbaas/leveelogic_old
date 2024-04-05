@@ -53,7 +53,13 @@ class AlgorithmCut(Algorithm):
                 raise ValueError("Unhandled intersection type")
 
         # return the final result
-        ds = DStability.from_soilpolygons(
-            final_soilpolygons, self.ds.soilcollection, old_ds=self.ds
-        )
-        return ds
+        if self.add_as_new_stage:
+            self.ds.add_stage_from_soilpolygons(final_soilpolygons)
+            # TODO add waterspanningen uit vorige berekening
+            # self.ds.copy_waterlevels()
+            return self.ds
+        else:
+            ds = DStability.from_soilpolygons(
+                final_soilpolygons, self.ds.soilcollection, old_ds=self.ds
+            )
+            return ds

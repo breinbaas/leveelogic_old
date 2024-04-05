@@ -99,3 +99,16 @@ class TestDStability:
         ds = DStability.from_stix("tests/testdata/stix/scenarios_and_stages.stix")
         spg = ds.stage_to_soilpolygons()
         assert len(spg) == 6
+
+    def test_copy_waternet(self):
+        ds = DStability.from_stix("tests/testdata/stix/fc_pl_sample.stix")
+        old_stage_index = ds.current_stage_index
+        spgs = ds.stage_to_soilpolygons()
+        new_stage_index = ds.add_stage_from_soilpolygons(soilpolygons=spgs)
+        ds.copy_waternet(
+            ds.current_scenario_index,
+            old_stage_index,
+            ds.current_scenario_index,
+            new_stage_index,
+        )
+        ds.serialize("tests/testdata/output/test_copy_waternet.stix")

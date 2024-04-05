@@ -9,6 +9,14 @@ class TestAlgorithmCut:
         ds = alg.execute()
         ds.serialize("tests/testdata/output/simple_geometry_cut.stix")
 
+    def test_execute_add_new_stage(self):
+        ds = DStability.from_stix("tests/testdata/stix/simple_geometry.stix")
+        alg = AlgorithmCut(
+            ds=ds, points=[(0, 3), (13, 3), (25, -11), (55, -11)], add_as_new_stage=True
+        )
+        ds = alg.execute()
+        ds.serialize("tests/testdata/output/simple_geometry_cut_as_added_stage.stix")
+
     def test_complex_geometry(self):
         ds = DStability.from_stix("tests/testdata/stix/fc_alg_pl_wsbd.stix")
         alg = AlgorithmCut(ds=ds, points=[(-100, 3), (40, -1.5), (130.496, -1.5)])
