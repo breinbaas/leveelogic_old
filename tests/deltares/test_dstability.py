@@ -112,3 +112,8 @@ class TestDStability:
             new_stage_index,
         )
         ds.serialize("tests/testdata/output/test_copy_waternet.stix")
+
+    def test_add_stage(self):
+        ds = DStability.from_stix("tests/testdata/stix/add_stage.stix")
+        ds.add_stage()
+        ds.serialize("tests/testdata/output/test_add_stage.stix")

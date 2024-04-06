@@ -20,6 +20,7 @@ from ..geolib.models.dstability import DStabilityModel
 from ..geolib.models.dstability.internal import (
     PersistableHeadLine,
     PersistablePoint,
+    PersistableSoilLayer,
     ShearStrengthModelTypePhreaticLevelInternal,
     UpliftVanParticleSwarmResult,
     BishopBruteForceResult,
@@ -34,6 +35,7 @@ from ..geometry.characteristic_point import (
     CharacteristicPoint,
     CharacteristicPointType,
 )
+from ..geolib.models.dstability.reinforcements import Nail, Geotextile, ForbiddenLine
 from ..soil.soilcollection import SoilCollection
 from ..geometry.soilprofileN import SoilProfileN
 from ..geometry.soilprofile1 import SoilProfile1
@@ -1049,6 +1051,73 @@ class DStability(BaseModel):
             )
         return soilpolygons
 
+    def add_stage(self, label: str = "New stage"):
+        scenario = self.model.scenarios[self.current_scenario_index]
+        prev_stage_index = self.current_stage_index
+
+        from_scenario_index = self.current_scenario_index
+        to_scenario_index = from_scenario_index
+        from_stage_index = self.current_stage_index
+        to_stage_index = from_stage_index + 1
+
+        self.model.add_stage(self.current_scenario_index, label=label)
+
+        # copy decorations
+        self.copy_decorations(
+            from_scenario_index,
+            from_stage_index,
+            to_scenario_index,
+            to_stage_index,
+        )
+
+        # copy geometry
+        # the layer dict contains the old layer id as the key and the new layer id as the value
+        layer_dict = self.copy_layers(
+            from_scenario_index,
+            from_stage_index,
+            to_scenario_index,
+            to_stage_index,
+        )
+
+        # copy reinforcements
+        self.copy_reinforcements(
+            from_scenario_index,
+            from_stage_index,
+            to_scenario_index,
+            to_stage_index,
+        )
+
+        # copy soillayers
+        self.copy_soillayers(
+            from_scenario_index,
+            from_stage_index,
+            to_scenario_index,
+            to_stage_index,
+            layer_dict,
+        )
+
+        # copy loads
+        self.copy_loads(
+            from_scenario_index,
+            from_stage_index,
+            to_scenario_index,
+            to_stage_index,
+        )
+
+        # copy statecorrelations
+
+        # copy states
+
+        # copy waternetcreatorsettings
+
+        # copy waternet
+        self.copy_waternet(
+            from_scenario_index,
+            from_stage_index,
+            to_scenario_index,
+            to_stage_index,
+        )
+
     def add_stage_from_soilpolygons(
         self,
         soilpolygons: List[SoilPolygon],
@@ -1064,6 +1133,166 @@ class DStability(BaseModel):
 
         self._post_process()
         return self.current_stage_index
+
+    def copy_loads(
+        self,
+        from_scenario_index: int,
+        from_stage_index: int,
+        to_scenario_index: int = -1,
+        to_stage_index: int = -1,
+    ):
+        from_loads = self.model._get_loads(from_scenario_index, from_stage_index)
+        for load in from_loads:
+            pass
+
+    def copy_soillayers(
+        self,
+        from_scenario_index: int,
+        from_stage_index: int,
+        to_scenario_index: int = -1,
+        to_stage_index: int = -1,
+        layer_dict: Dict = {},
+    ):
+        from_scenario = self.model.scenarios[from_scenario_index]
+        from_soillayers = None
+        to_soillayers = None
+        for soillayers in self.model.datastructure.soillayers:
+            if soillayers.Id == from_scenario.Stages[from_stage_index].SoilLayersId:
+                from_soillayers = soillayers
+            if (
+                soillayers.Id
+                == self.model.scenarios[to_scenario_index]
+                .Stages[to_stage_index]
+                .SoilLayersId
+            ):
+                to_soillayers = soillayers
+
+        for sl in from_soillayers.SoilLayers:
+            to_soillayers.SoilLayers.append(
+                PersistableSoilLayer(LayerId=layer_dict[sl.LayerId], SoilId=sl.SoilId)
+            )
+
+    def copy_reinforcements(
+        self,
+        from_scenario_index: int,
+        from_stage_index: int,
+        to_scenario_index: int = -1,
+        to_stage_index: int = -1,
+    ):
+        if to_scenario_index == -1:
+            to_scenario_index = self.current_scenario_index
+        if to_stage_index == -1:
+            to_stage_index = self.current_stage_index
+
+        from_scenario = self.model.scenarios[from_scenario_index]
+        from_reinforcements = None
+        for reinforcements in self.model.datastructure.reinforcements:
+            if (
+                reinforcements.Id
+                == from_scenario.Stages[from_stage_index].ReinforcementsId
+            ):
+                from_reinforcements = reinforcements
+                break
+
+        for fl in from_reinforcements.ForbiddenLines:
+            self.model.add_reinforcement(
+                ForbiddenLine(
+                    label=fl.Label,
+                    start=Point(x=fl.Start.X, z=fl.Start.Z),
+                    end=Point(x=fl.End.X, z=fl.End.Z),
+                ),
+                scenario_index=to_scenario_index,
+                stage_index=to_stage_index,
+            )
+        for gt in from_reinforcements.Geotextiles:
+            self.model.add_reinforcement(
+                Geotextile(
+                    label=gt.Label,
+                    start=Point(x=gt.Start.X, z=gt.Start.Z),
+                    end=Point(x=gt.End.X, z=gt.End.Z),
+                    effective_tensile_strength=gt.TensileStrength,
+                    reduction_area=gt.ReductionArea,
+                )
+            )
+
+        # TODO Nails are not copied due to todo's in geolib
+        # for n in from_reinforcements.Nails:
+        #     self.model.add_reinforcement(
+        #         Nail(
+        #             location=Point(x=n.Location.X, z=n.Location.Z),
+        #             direction=n.Direction,
+        #             horizontal_spacing=n.HorizontalSpacing,
+        #             length=n.Length,
+        #             diameter=n.Diameter,
+        #             grout_diameter=n.GroutDiameter,
+        #             critical_angle=n.CriticalAngle,
+        #             max_pull_force=n.MaxPullForce,
+        #             plastic_moment=n.PlasticMoment,
+        #             bending_stiffness=n.BendingStiffness,
+        #             use_facing=n.UseFacing,
+        #             use_lateral_stress=n.UseLateralStress,
+        #             use_shear_stress=n.UseShearStress,
+        #             lateral_stresses=n.LateralStresses,
+        #             shear_stresses=n.ShearStresses,
+        #         )
+        #     )
+
+    def copy_decorations(
+        self,
+        from_scenario_index: int,
+        from_stage_index: int,
+        to_scenario_index: int = -1,
+        to_stage_index: int = -1,
+    ):
+        if to_scenario_index == -1:
+            to_scenario_index = self.current_scenario_index
+        if to_stage_index == -1:
+            to_stage_index = self.current_stage_index
+
+        from_scenario = self.model.scenarios[from_scenario_index]
+        from_decorations = None
+        for decorations in self.model.datastructure.decorations:
+            if decorations.Id == from_scenario.Stages[from_stage_index].DecorationsId:
+                from_decorations = decorations
+                break
+
+        for exc in from_decorations.Excavations:
+            self.model.add_excavation(
+                points=[Point(x=p.X, z=p.Z) for p in exc.Points],
+                label=exc.Label,
+                scenario_index=to_scenario_index,
+                stage_index=to_stage_index,
+            )
+
+        # TODO -> nog niet geimplementeerd in geolib
+        for ele in decorations.Elevations:
+            pass
+
+    def copy_layers(
+        self,
+        from_scenario_index: int,
+        from_stage_index: int,
+        to_scenario_index: int = -1,
+        to_stage_index: int = -1,
+    ) -> Dict:
+        layer_dict = {}
+        if to_scenario_index == -1:
+            to_scenario_index = self.current_scenario_index
+        if to_stage_index == -1:
+            to_stage_index = self.current_stage_index
+
+        from_geom = self.model._get_geometry(from_scenario_index, from_stage_index)
+        to_geom = self.model._get_geometry(to_scenario_index, to_stage_index)
+        for layer in from_geom.Layers:
+            next_id = self.model._get_next_id()
+            layer_dict[layer.Id] = str(next_id)
+            to_geom.add_layer(
+                next_id,
+                layer.Label,
+                layer.Notes,
+                points=[Point(x=p.X, z=p.Z) for p in layer.Points],
+            )
+        return layer_dict
 
     def copy_waternet(
         self,

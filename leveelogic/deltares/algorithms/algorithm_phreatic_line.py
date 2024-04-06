@@ -191,7 +191,11 @@ class AlgorithmPhreaticLine(Algorithm):
         return [[Ax, Az], [Bx, Bz], [Cx, Cz], [Dx, Dz], [Ex, Ez], [Fx, Fz]]
 
     def _execute(self) -> DStability:
-        ds = deepcopy(self.ds)
+        if self.add_as_new_stage:
+            ds = self.ds
+            ds.add_stage()
+        else:
+            ds = deepcopy(self.ds)
 
         abcdef = []  # points A B C D E and F
 
