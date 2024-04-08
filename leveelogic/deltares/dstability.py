@@ -21,6 +21,10 @@ from ..geolib.models.dstability.internal import (
     PersistableHeadLine,
     PersistablePoint,
     PersistableSoilLayer,
+    PersistableConsolidation,
+    PersistableStateLine,
+    PersistableStateLinePoint,
+    PersistableStatePoint,
     ShearStrengthModelTypePhreaticLevelInternal,
     UpliftVanParticleSwarmResult,
     BishopBruteForceResult,
@@ -36,6 +40,7 @@ from ..geometry.characteristic_point import (
     CharacteristicPointType,
 )
 from ..geolib.models.dstability.reinforcements import Nail, Geotextile, ForbiddenLine
+from ..geolib.models.dstability.loads import Earthquake, LineLoad, UniformLoad, TreeLoad
 from ..soil.soilcollection import SoilCollection
 from ..geometry.soilprofileN import SoilProfileN
 from ..geometry.soilprofile1 import SoilProfile1
@@ -1102,13 +1107,33 @@ class DStability(BaseModel):
             from_stage_index,
             to_scenario_index,
             to_stage_index,
+            layer_dict,
         )
 
         # copy statecorrelations
+        self.copy_state_correlations(
+            from_scenario_index,
+            from_stage_index,
+            to_scenario_index,
+            to_stage_index,
+        )
 
         # copy states
+        self.copy_states(
+            from_scenario_index,
+            from_stage_index,
+            to_scenario_index,
+            to_stage_index,
+            layer_dict=layer_dict,
+        )
 
         # copy waternetcreatorsettings
+        self.copy_waternetcreator_settings(
+            from_scenario_index,
+            from_stage_index,
+            to_scenario_index,
+            to_stage_index,
+        )
 
         # copy waternet
         self.copy_waternet(
@@ -1134,16 +1159,210 @@ class DStability(BaseModel):
         self._post_process()
         return self.current_stage_index
 
-    def copy_loads(
+    def copy_states(
+        self,
+        from_scenario_index: int,
+        from_stage_index: int,
+        to_scenario_index: int = -1,
+        to_stage_index: int = -1,
+        layer_dict: Dict = {},
+    ):
+        from_state = self.model._get_state(from_scenario_index, from_stage_index)
+        to_state = self.model._get_state(to_scenario_index, to_stage_index)
+
+        for sl in from_state.StateLines:
+            points = [PersistablePoint(X=p.X, Z=p.Z) for p in sl.Points]
+            state_points = [
+                PersistableStateLinePoint(
+                    Above=p.Above,
+                    Below=p.Below,
+                    IsAboveAndBelowCorrelated=p.IsAboveAndBelowCorrelated,
+                    IsProbabilistic=p.IsProbabilistic,
+                    Label=p.Label,
+                    X=p.X,
+                    Id=self.model._get_next_id(),
+                )
+                for p in sl.Values
+            ]
+            to_state.add_state_line(points, state_points)
+
+        for sp in from_state.StatePoints:
+            to_state.add_state_point(
+                PersistableStatePoint(
+                    Id=self.model._get_next_id(),
+                    IsProbabilistic=sp.IsProbabilistic,
+                    Label=sp.Label,
+                    LayerId=layer_dict[sp.LayerId],
+                    Point=sp.Point,
+                    Stress=sp.Stress,
+                )
+            )
+
+    def copy_state_correlations(
         self,
         from_scenario_index: int,
         from_stage_index: int,
         to_scenario_index: int = -1,
         to_stage_index: int = -1,
     ):
+        from_sc = self.model._get_state_correlations(
+            from_scenario_index, from_stage_index
+        )
+        to_sc = self.model._get_state_correlations(to_scenario_index, to_stage_index)
+        for sc in from_sc.StateCorrelations:
+            to_sc.add_state_correlation(sc)
+
+    def copy_waternetcreator_settings(
+        self,
+        from_scenario_index: int,
+        from_stage_index: int,
+        to_scenario_index: int = -1,
+        to_stage_index: int = -1,
+    ):
+        from_settings, to_settings = None, None
+        for wn in self.model.datastructure.waternetcreatorsettings:
+            if (
+                wn.Id
+                == self.model.scenarios[from_scenario_index]
+                .Stages[from_stage_index]
+                .WaternetCreatorSettingsId
+            ):
+                from_settings = wn
+            elif (
+                wn.Id
+                == self.model.scenarios[to_scenario_index]
+                .Stages[to_stage_index]
+                .WaternetCreatorSettingsId
+            ):
+                to_settings = wn
+
+        to_settings.AdjustForUplift = from_settings.AdjustForUplift
+        to_settings.AquiferInsideAquitardLayerId = (
+            from_settings.AquiferInsideAquitardLayerId
+        )
+        to_settings.AquiferLayerId = from_settings.AquiferLayerId
+        to_settings.AquiferLayerInsideAquitardLeakageLengthInwards = (
+            from_settings.AquiferLayerInsideAquitardLeakageLengthInwards
+        )
+        to_settings.AquiferLayerInsideAquitardLeakageLengthOutwards = (
+            from_settings.AquiferLayerInsideAquitardLeakageLengthOutwards
+        )
+        to_settings.AquitardHeadLandSide = from_settings.AquitardHeadLandSide
+        to_settings.AquitardHeadWaterSide = from_settings.AquitardHeadWaterSide
+        to_settings.DitchCharacteristics = from_settings.DitchCharacteristics
+        to_settings.DrainageConstruction = from_settings.DrainageConstruction
+        to_settings.EmbankmentCharacteristics = from_settings.EmbankmentCharacteristics
+        to_settings.EmbankmentSoilScenario = from_settings.EmbankmentSoilScenario
+        to_settings.InitialLevelEmbankmentTopLandSide = (
+            from_settings.InitialLevelEmbankmentTopLandSide
+        )
+        to_settings.InitialLevelEmbankmentTopWaterSide = (
+            from_settings.InitialLevelEmbankmentTopWaterSide
+        )
+        to_settings.IntrusionLength = from_settings.IntrusionLength
+        to_settings.IsAquiferLayerInsideAquitard = (
+            from_settings.IsAquiferLayerInsideAquitard
+        )
+        to_settings.IsDitchPresent = from_settings.IsDitchPresent
+        to_settings.IsDrainageConstructionPresent = (
+            from_settings.IsDrainageConstructionPresent
+        )
+        to_settings.MeanWaterLevel = from_settings.MeanWaterLevel
+        to_settings.NormativeWaterLevel = from_settings.NormativeWaterLevel
+        to_settings.OffsetEmbankmentToeLandSide = (
+            from_settings.OffsetEmbankmentToeLandSide
+        )
+        to_settings.OffsetEmbankmentTopLandSide = (
+            from_settings.OffsetEmbankmentTopLandSide
+        )
+        to_settings.OffsetEmbankmentTopWaterSide = (
+            from_settings.OffsetEmbankmentTopWaterSide
+        )
+        to_settings.OffsetShoulderBaseLandSide = (
+            from_settings.OffsetShoulderBaseLandSide
+        )
+        to_settings.PleistoceneLeakageLengthInwards = (
+            from_settings.PleistoceneLeakageLengthInwards
+        )
+        to_settings.PleistoceneLeakageLengthOutwards = (
+            from_settings.PleistoceneLeakageLengthOutwards
+        )
+        to_settings.UseDefaultOffsets = from_settings.UseDefaultOffsets
+        to_settings.WaterLevelHinterland = from_settings.WaterLevelHinterland
+
+    def copy_loads(
+        self,
+        from_scenario_index: int,
+        from_stage_index: int,
+        to_scenario_index: int = -1,
+        to_stage_index: int = -1,
+        layer_dict: Dict = {},
+    ):
         from_loads = self.model._get_loads(from_scenario_index, from_stage_index)
-        for load in from_loads:
-            pass
+
+        # # TODO earthquakes
+        # consolidations = [
+        #     PersistableConsolidation(
+        #         Degree=cons.Degree, LayerId=layer_dict[cons.LayerId]
+        #     )
+        #     for cons in from_loads.Earthquake.Consolidations
+        # ]
+        # self.model.add_load(
+        #     Earthquake(
+        #         scenario_index=to_scenario_index,
+        #         stage_index=to_stage_index,
+        #         label=from_loads.Earthquake.Label,
+        #         free_water_factor=from_loads.Earthquake.FreeWaterFactor,
+        #         horizontal_factor=from_loads.Earthquake.HorizontalFactor,
+        #         vertical_factor=from_loads.Earthquake.VerticalFactor,
+        #         consolidations=consolidations,
+        #     )
+        # )
+        # TODO Layer loads
+        # for ll in from_loads.LayerLoads:
+        #     consolidations = [
+        #         PersistableConsolidation(
+        #             Degree=cons.Degree, LayerId=layer_dict[cons.LayerId]
+        #         )
+        #         for cons in ll.Consolidations
+        #     ]
+        #     self.model.add_load()
+        for ll in from_loads.LineLoads:
+            consolidations = [
+                PersistableConsolidation(
+                    Degree=cons.Degree, LayerId=layer_dict[cons.LayerId]
+                )
+                for cons in ll.Consolidations
+            ]
+            self.model.add_load(
+                LineLoad(
+                    label=ll.Label,
+                    location=Point(x=ll.Location.X, z=ll.Location.Z),
+                    angle=ll.Angle,
+                    magnitude=ll.Magnitude,
+                    angle_of_distribution=ll.Spread,
+                )
+            )
+        for tr in from_loads.Trees:
+            self.model.add_load(
+                TreeLoad(
+                    label=tr.Label,
+                    tree_top_location=Point(x=tr.Location.X, z=tr.Location.Z),
+                    wind_force=tr.Force,
+                    width_of_root_zone=tr.RootZoneWidth,
+                    angle_of_distribution=tr.Spread,
+                )
+            )
+        for ul in from_loads.UniformLoads:
+            self.model.add_load(
+                UniformLoad(
+                    label=ul.Label,
+                    start=ul.Start,
+                    end=ul.End,
+                    magnitude=ul.Magnitude,
+                    angle_of_distribution=ul.Spread,
+                )
+            )
 
     def copy_soillayers(
         self,
