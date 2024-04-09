@@ -1067,13 +1067,13 @@ class DStability(BaseModel):
 
         self.model.add_stage(self.current_scenario_index, label=label)
 
-        # copy decorations
-        self.copy_decorations(
-            from_scenario_index,
-            from_stage_index,
-            to_scenario_index,
-            to_stage_index,
-        )
+        # # copy decorations TODO > decorations should be added as permanent stage changes
+        # self.copy_decorations(
+        #     from_scenario_index,
+        #     from_stage_index,
+        #     to_scenario_index,
+        #     to_stage_index,
+        # )
 
         # copy geometry
         # the layer dict contains the old layer id as the key and the new layer id as the value
@@ -1101,14 +1101,14 @@ class DStability(BaseModel):
             layer_dict,
         )
 
-        # copy loads
-        self.copy_loads(
-            from_scenario_index,
-            from_stage_index,
-            to_scenario_index,
-            to_stage_index,
-            layer_dict,
-        )
+        # # copy loads TODO > according to the manual loads and pressure are removed in a new stage
+        # self.copy_loads(
+        #     from_scenario_index,
+        #     from_stage_index,
+        #     to_scenario_index,
+        #     to_stage_index,
+        #     layer_dict,
+        # )
 
         # copy statecorrelations
         self.copy_state_correlations(
@@ -1135,13 +1135,13 @@ class DStability(BaseModel):
             to_stage_index,
         )
 
-        # copy waternet
-        self.copy_waternet(
-            from_scenario_index,
-            from_stage_index,
-            to_scenario_index,
-            to_stage_index,
-        )
+        # # copy waternet TODO > according to the manual loads and pressure are removed in a new stage
+        # self.copy_waternet(
+        #     from_scenario_index,
+        #     from_stage_index,
+        #     to_scenario_index,
+        #     to_stage_index,
+        # )
 
     def add_stage_from_soilpolygons(
         self,
