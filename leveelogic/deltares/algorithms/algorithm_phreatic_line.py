@@ -100,6 +100,11 @@ class AlgorithmPhreaticLine(Algorithm):
         # Point E3 (SAND ON CLAY) = E2 (SAND ON SAND)
         Ez3 = Ez2
 
+        # Point E must be equal to or above polder level
+        Ez1 = max(self.polder_level, Ez1)
+        Ez2 = max(self.polder_level, Ez2)
+        Ez3 = max(self.polder_level, Ez3)
+
         # Point B1 (CLAY DIKE) River water level minus offset, with default offset 1 m, limited by minimum value ZB;initial, see section 3.3.1.2.
         Bx1 = Ax + 1.0
         if self.phreatic_level_embankment_top_waterside is not None:
@@ -184,6 +189,22 @@ class AlgorithmPhreaticLine(Algorithm):
             Dz2 = (Ez2 - Cz2) / 2.0
             Dz3 = (Ez3 - Cz3) / 2.0
 
+        # Point D must be equal to or above polder level
+        Dz1 = max(self.polder_level, Dz1)
+        Dz2 = max(self.polder_level, Dz2)
+        Dz3 = max(self.polder_level, Dz3)
+
+        # Point D must be equal to or below point C
+        Dz1 = min(Cz1, Dz1)
+        Dz2 = min(Cz2, Dz2)
+        Dz3 = min(Cz3, Dz3)
+
+        # Point E must be equal to or below point D
+        # TODO > what if we adjust this value but E is already used for interpolation
+        Ez1 = min(Dz1, Ez1)
+        Ez2 = min(Dz2, Ez2)
+        Ez3 = min(Dz3, Ez3)
+
         # Point F Intersection point polder level with ditch (is determined automatically)
         Fz = self.polder_level
         if len(ds.ditch_points) > 0:  # with ditch find intersection
@@ -212,40 +233,75 @@ class AlgorithmPhreaticLine(Algorithm):
         else:
             raise ValueError(f"Unknown material layout '{self.ds.material_layout}'")
 
-        # from point C to point F we want to be sure that all points are below the surface
-        plpoints = [[ds.left, self.river_level]] + abcdef[:2]
+        # Make sure the phreatic line does not exceed the surface
+        # Between A and F
+        # 1. get all surface points
+        surface_points = [
+            p for p in ds.surface if p[0] > abcdef[0][0] and p[0] < abcdef[-1][0]
+        ]
+        # 2. get all intersections between surface and pl line
+        intersections = [
+            p
+            for p in polyline_polyline_intersections(abcdef, ds.surface)
+            if p[0] > Ax and p[0] < Ex
+        ]
+        # 3. merge x coords
+        check_points = sorted([p[0] for p in surface_points + intersections])
 
-        # first insert all the points based on linear interpolation
-        # without checking the height
-        # TODO > immediately check if the point is above the surface line and ajust accordingly
-        for i in range(2, len(abcdef) - 1):
-            p1 = abcdef[i]
-            p2 = abcdef[i + 1]
+        # create the final points, start with the leftmost point
+        final_points = [[self.ds.left, self.river_level], abcdef[0]]
+        # now add the points
+        for x in check_points:
+            for i in range(1, len(abcdef)):
+                x1, z1 = abcdef[i - 1]
+                x2, z2 = abcdef[i]
+                if x1 <= x and x <= x2:
+                    z_pl = z1 + (x - x1) / (x2 - x1) * (z2 - z1)
+                    z_surface = ds.z_at(x)
 
-            plpoints.append(p1)
-            for p in ds.surface:
-                if p1[0] < p[0] and p[0] < p2[0]:
-                    z_interpolated = p1[1] + (p[0] - p1[0]) / (p2[0] - p1[0]) * (
-                        p2[1] - p1[1]
-                    )
-                    plpoints.append([p[0], z_interpolated])
+                    if z_pl > z_surface - 0.01:
+                        z_pl = z_surface - 0.01
 
-            if i == len(abcdef) - 2:
-                plpoints.append(p2)
+                    final_points.append([x, z_pl])
+                    break
 
-        # now check the height for all points between C and (excluding) F
-        # TODO > als de freatische lijn de surface snijdt dan moet het snijpunt wel toegevoegd
-        # zie pl_sand_on_clay_solution
-        for i in range(len(plpoints)):
-            if plpoints[i][0] > abcdef[2][0] and plpoints[i][0] < abcdef[-1][0]:
-                z_surface = ds.z_at(plpoints[i][0])
-                if plpoints[i][1] > z_surface - self.surface_offset:
-                    plpoints[i][1] = z_surface - self.surface_offset
-                # but don't go higher than the previous point
-                if i > 0 and plpoints[i][1] > plpoints[i - 1][1]:
-                    plpoints[i][1] = plpoints[i - 1][1]
+        # add F and the rightmost point
+        final_points += [abcdef[-1], [ds.right, self.polder_level]]
 
-        plpoints.append([ds.right, self.polder_level])
+        # # from point C to point F we want to be sure that all points are below the surface
+        # plpoints = [[ds.left, self.river_level]] + abcdef[:2]
 
-        ds.set_phreatic_line(plpoints)
+        # # first insert all the points based on linear interpolation
+        # # without checking the height
+        # # TODO > immediately check if the point is above the surface line and ajust accordingly
+        # for i in range(2, len(abcdef) - 1):
+        #     p1 = abcdef[i]
+        #     p2 = abcdef[i + 1]
+
+        #     plpoints.append(p1)
+        #     for p in ds.surface:
+        #         if p1[0] < p[0] and p[0] < p2[0]:
+        #             z_interpolated = p1[1] + (p[0] - p1[0]) / (p2[0] - p1[0]) * (
+        #                 p2[1] - p1[1]
+        #             )
+        #             plpoints.append([p[0], z_interpolated])
+
+        #     if i == len(abcdef) - 2:
+        #         plpoints.append(p2)
+
+        # # now check the height for all points between C and (excluding) F
+        # # TODO > als de freatische lijn de surface snijdt dan moet het snijpunt wel toegevoegd
+        # # zie pl_sand_on_clay_solution
+        # for i in range(len(plpoints)):
+        #     if plpoints[i][0] > abcdef[2][0] and plpoints[i][0] < abcdef[-1][0]:
+        #         z_surface = ds.z_at(plpoints[i][0])
+        #         if plpoints[i][1] > z_surface - self.surface_offset:
+        #             plpoints[i][1] = z_surface - self.surface_offset
+        #         # but don't go higher than the previous point
+        #         if i > 0 and plpoints[i][1] > plpoints[i - 1][1]:
+        #             plpoints[i][1] = plpoints[i - 1][1]
+
+        # plpoints.append([ds.right, self.polder_level])
+
+        ds.set_phreatic_line(final_points)
         return ds
