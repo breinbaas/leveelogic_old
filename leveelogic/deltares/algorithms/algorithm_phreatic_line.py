@@ -24,7 +24,8 @@ class AlgorithmPhreaticLine(Algorithm):
     surface_offset: float = 0.01
     phreatic_level_embankment_top_waterside: Optional[float] = None
     phreatic_level_embankment_top_landside: Optional[float] = None
-    aquifer_label: Optional[str] = ""
+    aquifer_label: Optional[str] = None
+    aquifer_inside_aquitard_label: Optional[str] = None
     penetration_layer_thickness: Optional[float] = (
         1.0  # default 1.0 or 3.0 for tidal zones
     )
@@ -72,6 +73,14 @@ class AlgorithmPhreaticLine(Algorithm):
             except Exception as e:
                 raise AlgorithmInputCheckError(
                     f"Invalid aquifer label ('{self.aquifer_label}') given"
+                )
+
+        if self.aquifer_inside_aquitard_label is not None:
+            try:
+                self.ds.get_layer_by_label(self.aquifer_inside_aquitard_label)
+            except Exception as e:
+                raise AlgorithmInputCheckError(
+                    f"Invalid aquifer inside aquitard label ('{self.aquifer_inside_aquitard_label}') given"
                 )
 
         return True
@@ -293,7 +302,17 @@ class AlgorithmPhreaticLine(Algorithm):
 
         # add F and the rightmost point
         final_points += [abcdef[-1], [ds.right, self.polder_level]]
-        ds.set_phreatic_line(final_points)
+        pl_id = ds.set_phreatic_line(final_points)
+
+        # Add the referenceline
+        ds.model.add_reference_line(
+            points=[Point(x=p[0], z=p[1]) for p in ds.surface],
+            top_head_line_id=pl_id,
+            bottom_headline_id=pl_id,
+            scenario_index=ds.current_scenario_index,
+            stage_index=ds.current_stage_index,
+            label="Freatische zone bovenkant",
+        )
 
         # For scenario “Sand dike on sand” (2B), only PL1 (Phreatic line) is created
         if ds.material_layout == MaterialLayoutType.SAND_EMBANKEMENT_ON_SAND:
@@ -302,6 +321,12 @@ class AlgorithmPhreaticLine(Algorithm):
         # if we have no aquifer then we have no PL2, PL3 or PL4
         if self.aquifer_label is None:
             return ds
+
+        # get the aquifer layer
+        aquifer_layer = ds.get_layer_by_label(self.aquifer_label)
+        aquifer_points = get_top_of_polygon(
+            [[float(p.X), float(p.Z)] for p in aquifer_layer.Points]
+        )
 
         #######
         # PL2 #
@@ -326,61 +351,86 @@ class AlgorithmPhreaticLine(Algorithm):
             ]
 
             # add the headline
-            hl_id = ds.model.add_head_line(
+            pl2_id = ds.model.add_head_line(
                 points=[Point(x=p[0], z=p[1]) for p in pl2points],
                 label="Stijghoogtelijn 2 (PL2)",
                 scenario_index=ds.current_scenario_index,
                 stage_index=ds.current_stage_index,
             )
 
-            # get the aquifer layer
-            aquifer_layer = ds.get_layer_by_label(self.aquifer_label)
-            aquifer_points = get_top_of_polygon(
-                [[float(p.X), float(p.Z)] for p in aquifer_layer.Points]
-            )
             # add the penetration_layer_thickness
-            aquifer_points = [
+            aquifer_points_with_penetration_layer = [
                 [p[0], p[1] + self.penetration_layer_thickness] for p in aquifer_points
             ]
 
             # add the referenceline
             ds.model.add_reference_line(
-                points=[Point(x=p[0], z=p[1]) for p in aquifer_points],
-                bottom_headline_id=hl_id,
-                top_head_line_id=hl_id,
+                points=[
+                    Point(x=p[0], z=p[1]) for p in aquifer_points_with_penetration_layer
+                ],
+                bottom_headline_id=pl2_id,
+                top_head_line_id=pl2_id,
                 label="Indringingszone onderste aquifer",
                 scenario_index=ds.current_scenario_index,
                 stage_index=ds.current_stage_index,
             )
 
-        return ds
-
-        # TODO !
         #######
         # PL3 #
         #######
-        A1A = [ds.left, self.river_level_mhw]
-        B1A = [
+        # TODO !
+        A1B = [ds.left, self.river_level_mhw]
+        B1B = [
             ds.get_characteristic_point(
                 CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE
             ).x,
-            self.river_level_ghw,
+            self.river_level_mhw,
         ]
-        C1A = [
-            ds.get_characteristic_point(
-                CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE
-            ).x,
-            0.0,
-        ]
-        D1A = [
-            Ex,
-            ds.z_at(Ex),
-        ]
-        # TODO > auto adjust for uplift
-        E1A = []
-        F1A = []
-        G1A = [
-            ds.right,
-        ]
+
+        if self.ds.material_layout == MaterialLayoutType.CLAY_EMBANKEMENT_ON_SAND:
+            D1B = (Ex, ds.z_at(Ex))
+            G1B = (ds.right, D1B[1])
+
+            pl3_id = ds.model.add_head_line(
+                points=[Point(x=p[0], z=p[1]) for p in [A1B, B1B, D1B, G1B]],
+                label="Stijghoogtelijn 3 (PL3)",
+                scenario_index=ds.current_scenario_index,
+                stage_index=ds.current_stage_index,
+            )
+
+            ds.model.add_reference_line(
+                points=[Point(x=p[0], z=p[1]) for p in aquifer_points],
+                bottom_headline_id=pl3_id,
+                top_head_line_id=pl3_id,
+                label="Waternetlijn onderste aquifer",
+                scenario_index=ds.current_scenario_index,
+                stage_index=ds.current_stage_index,
+            )
+        else:
+            raise NotImplementedError("PL3 for 1A and 2A is not yet implemented!")
+            C1A = [
+                ds.get_characteristic_point(
+                    CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE
+                ).x,
+                0.0,
+            ]
+            D1A = [
+                Ex,
+                ds.z_at(Ex),
+            ]
+            # TODO > auto adjust for uplift
+            E1A = []
+            F1A = []
+            G1A = [
+                ds.right,
+            ]
+
+        ########
+        # PL 4 #
+        ########
+
+        # There is only a PL4 if we have a aquifer inside aquitard label
+        if self.aquifer_inside_aquitard_label is None:
+            return ds
 
         return ds

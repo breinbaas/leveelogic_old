@@ -597,24 +597,22 @@ class DStability(BaseModel):
 
         # 1. check if we already have a phreatic line
         if self.has_phreatic_line:
+            phreatic_line_id = self.model._get_waternet(
+                self.current_scenario_index, self.current_stage_index
+            ).PhreaticLineId
             points = [PersistablePoint(X=p[0], Z=p[1]) for p in points]
             for i, hl in enumerate(
                 self.model._get_waternet(
                     self.current_scenario_index, self.current_stage_index
                 ).HeadLines
             ):
-                if (
-                    hl.Id
-                    == self.model._get_waternet(
-                        self.current_scenario_index, self.current_stage_index
-                    ).PhreaticLineId
-                ):
+                if hl.Id == phreatic_line_id:
                     self.model._get_waternet(
                         self.current_scenario_index, self.current_stage_index
                     ).HeadLines[i].Points = points
                     break
         else:
-            self.model.add_head_line(
+            phreatic_line_id = self.model.add_head_line(
                 [Point(x=p[0], z=p[1]) for p in points],
                 "Phreatic line",
                 is_phreatic_line=True,
@@ -622,6 +620,7 @@ class DStability(BaseModel):
                 stage_index=self.current_stage_index,
             )
         self._post_process()
+        return phreatic_line_id
 
     def _post_process(self):
         """Do some post processing stuff to set properties and save time"""
