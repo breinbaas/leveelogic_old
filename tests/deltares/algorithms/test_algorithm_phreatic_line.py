@@ -12,16 +12,27 @@ class TestAlgorithmPhreaticLineStix:
         ds_solution = DStability.from_stix(
             "tests/testdata/stix/solutions/pl_clay_on_clay_solution.stix"
         )
-        pts_old = ds_solution.phreatic_line_points
-        alg = AlgorithmPhreaticLine(ds=ds, river_level=18, polder_level=8)
+        pts_old_pl1 = ds_solution.phreatic_line_points
+        alg = AlgorithmPhreaticLine(
+            ds=ds,
+            river_level_mhw=18,
+            river_level_ghw=11,
+            polder_level=8,
+        )
         ds = alg.execute()
-        pts_new = ds.phreatic_line_points
+        pts_new_pl1 = ds.phreatic_line_points
         plt.figure(figsize=(15, 5))
         plt.plot(
-            [p[0] for p in pts_old], [p[1] for p in pts_old], "b--", label="solution"
+            [p[0] for p in pts_old_pl1],
+            [p[1] for p in pts_old_pl1],
+            "b--",
+            label="PL1 solution",
         )
         plt.plot(
-            [p[0] for p in pts_new], [p[1] for p in pts_new], "k-", label="algorithm"
+            [p[0] for p in pts_new_pl1],
+            [p[1] for p in pts_new_pl1],
+            "k-",
+            label="PL1 algorithm",
         )
         plt.legend()
         plt.savefig("tests/testdata/output/test_pl_clay_on_clay.png")
@@ -32,16 +43,51 @@ class TestAlgorithmPhreaticLineStix:
         ds_solution = DStability.from_stix(
             "tests/testdata/stix/solutions/pl_clay_on_sand_solution.stix"
         )
-        pts_old = ds_solution.phreatic_line_points
-        alg = AlgorithmPhreaticLine(ds=ds, river_level=18, polder_level=8)
+        pts_old_pl1 = ds_solution.phreatic_line_points
+        pts_old_pl2 = [
+            (float(p.X), float(p.Z))
+            for p in ds_solution.get_headline_by_label("Stijghoogtelijn 2 (PL2)").Points
+        ]
+        alg = AlgorithmPhreaticLine(
+            ds=ds,
+            river_level_mhw=18,
+            river_level_ghw=11,
+            polder_level=8,
+            hydraulic_head_pl2_inward=10,
+            hydraulic_head_pl2_outward=10,
+            aquifer_label="L 3",
+        )
         ds = alg.execute()
-        pts_new = ds.phreatic_line_points
+        pts_new_pl1 = ds.phreatic_line_points
+        # TODO > convert to points
+        pts_new_pl2 = [
+            (float(p.X), float(p.Z))
+            for p in ds.get_headline_by_label("Stijghoogtelijn 2 (PL2)").Points
+        ]
         plt.figure(figsize=(15, 5))
         plt.plot(
-            [p[0] for p in pts_old], [p[1] for p in pts_old], "b--", label="solution"
+            [p[0] for p in pts_old_pl1],
+            [p[1] for p in pts_old_pl1],
+            "b--",
+            label="PL1 solution",
         )
         plt.plot(
-            [p[0] for p in pts_new], [p[1] for p in pts_new], "k-", label="algorithm"
+            [p[0] for p in pts_old_pl2],
+            [p[1] for p in pts_old_pl2],
+            "b",
+            label="PL2 solution",
+        )
+        plt.plot(
+            [p[0] for p in pts_new_pl1],
+            [p[1] for p in pts_new_pl1],
+            "r--",
+            label="PL1 algorithm",
+        )
+        plt.plot(
+            [p[0] for p in pts_new_pl2],
+            [p[1] for p in pts_new_pl2],
+            "r",
+            label="PL2 algorithm",
         )
         plt.legend()
         plt.savefig("tests/testdata/output/test_pl_clay_on_sand.png")
@@ -52,16 +98,27 @@ class TestAlgorithmPhreaticLineStix:
         ds_solution = DStability.from_stix(
             "tests/testdata/stix/solutions/pl_sand_on_clay_solution.stix"
         )
-        pts_old = ds_solution.phreatic_line_points
-        alg = AlgorithmPhreaticLine(ds=ds, river_level=18, polder_level=8)
+        pts_old_pl1 = ds_solution.phreatic_line_points
+        alg = AlgorithmPhreaticLine(
+            ds=ds,
+            river_level_mhw=18,
+            river_level_ghw=11,
+            polder_level=8,
+        )
         ds = alg.execute()
-        pts_new = ds.phreatic_line_points
+        pts_new_pl1 = ds.phreatic_line_points
         plt.figure(figsize=(15, 5))
         plt.plot(
-            [p[0] for p in pts_old], [p[1] for p in pts_old], "b--", label="solution"
+            [p[0] for p in pts_old_pl1],
+            [p[1] for p in pts_old_pl1],
+            "b--",
+            label="PL1 solution",
         )
         plt.plot(
-            [p[0] for p in pts_new], [p[1] for p in pts_new], "k-", label="algorithm"
+            [p[0] for p in pts_new_pl1],
+            [p[1] for p in pts_new_pl1],
+            "k-",
+            label="PL1 algorithm",
         )
         plt.legend()
         plt.savefig("tests/testdata/output/test_pl_sand_on_clay.png")
@@ -72,16 +129,27 @@ class TestAlgorithmPhreaticLineStix:
         ds_solution = DStability.from_stix(
             "tests/testdata/stix/solutions/pl_sand_on_sand_solution.stix"
         )
-        pts_old = ds_solution.phreatic_line_points
-        alg = AlgorithmPhreaticLine(ds=ds, river_level=18, polder_level=8)
+        pts_old_pl1 = ds_solution.phreatic_line_points
+        alg = AlgorithmPhreaticLine(
+            ds=ds,
+            river_level_mhw=18,
+            river_level_ghw=11,
+            polder_level=8,
+        )
         ds = alg.execute()
-        pts_new = ds.phreatic_line_points
+        pts_new_pl1 = ds.phreatic_line_points
         plt.figure(figsize=(15, 5))
         plt.plot(
-            [p[0] for p in pts_old], [p[1] for p in pts_old], "b--", label="solution"
+            [p[0] for p in pts_old_pl1],
+            [p[1] for p in pts_old_pl1],
+            "b--",
+            label="PL1 solution",
         )
         plt.plot(
-            [p[0] for p in pts_new], [p[1] for p in pts_new], "k-", label="algorithm"
+            [p[0] for p in pts_new_pl1],
+            [p[1] for p in pts_new_pl1],
+            "k-",
+            label="PL1 algorithm",
         )
         plt.legend()
         plt.savefig("tests/testdata/output/test_pl_sand_on_sand.png")

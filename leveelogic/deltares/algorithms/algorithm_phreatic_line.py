@@ -7,14 +7,15 @@ from .algorithm import (
     AlgorithmInputCheckError,
     AlgorithmExecutionError,
 )
-from ...helpers import polyline_polyline_intersections
+from ...helpers import polyline_polyline_intersections, get_top_of_polygon
 from ..dstability import DStability, MaterialLayoutType
 from ...geometry.characteristic_point import CharacteristicPointType
 from ...helpers import line_polyline_intersections
 
 
 class AlgorithmPhreaticLine(Algorithm):
-    river_level: float
+    river_level_mhw: float
+    river_level_ghw: float
     polder_level: float
     B_offset: Optional[float] = None
     C_offset: Optional[float] = None
@@ -23,6 +24,13 @@ class AlgorithmPhreaticLine(Algorithm):
     surface_offset: float = 0.01
     phreatic_level_embankment_top_waterside: Optional[float] = None
     phreatic_level_embankment_top_landside: Optional[float] = None
+    aquifer_label: Optional[str] = ""
+    penetration_layer_thickness: Optional[float] = (
+        1.0  # default 1.0 or 3.0 for tidal zones
+    )
+    hydraulic_head_pl2_inward: Optional[float] = None
+    hydraulic_head_pl2_outward: Optional[float] = None
+    adjust_for_uplift: bool = False
 
     def _check_input(self):
         # TODO the stix file must contain the waternet creator settings
@@ -53,6 +61,19 @@ class AlgorithmPhreaticLine(Algorithm):
                 "The point for the embankment toe waterside is not defined in the Waternet creator settings."
             )
 
+        if self.adjust_for_uplift:
+            raise NotImplementedError(
+                "The adjust for uplift feature is not yet implemented."
+            )
+
+        if self.aquifer_label is not None:
+            try:
+                self.ds.get_layer_by_label(self.aquifer_label)
+            except Exception as e:
+                raise AlgorithmInputCheckError(
+                    f"Invalid aquifer label ('{self.aquifer_label}') given"
+                )
+
         return True
 
     def _execute(self) -> DStability:
@@ -62,20 +83,23 @@ class AlgorithmPhreaticLine(Algorithm):
         else:
             ds = deepcopy(self.ds)
 
+        #################
+        # PHREATIC LINE #
+        #################
         # height River waterlevel - Dike toe level
         x = self.ds.get_characteristic_point(
             CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE
         ).x
-        h = self.river_level - ds.z_at(x)
+        h = self.river_level_mhw - ds.z_at(x)
 
         # point A - (ALL) - Intersection of the river water level with the outer slope
         intersections = line_polyline_intersections(
-            ds.left, self.river_level, ds.right, self.river_level, ds.surface
+            ds.left, self.river_level_mhw, ds.right, self.river_level_mhw, ds.surface
         )
 
         if len(intersections) == 0:
             raise AlgorithmExecutionError(
-                f"No intersection with the surface and the given river level ({self.river_level}) found."
+                f"No intersection with the surface and the given river level ({self.river_level_mhw}) found."
             )
 
         Ax, Az = intersections[0]
@@ -112,9 +136,9 @@ class AlgorithmPhreaticLine(Algorithm):
             Bz1 = self.phreatic_level_embankment_top_waterside
         elif self.B_offset is not None:
             # user defined offset
-            Bz1 = self.river_level - self.B_offset
+            Bz1 = self.river_level_mhw - self.B_offset
         else:  # default offset
-            Bz1 = self.river_level - 1.0
+            Bz1 = self.river_level_mhw - 1.0
 
         # Point B2 (SAND ON CLAY) River water level minus offset, with default offset 0.5 × (river level - dike toe polder level), limited by minimum value ZB;initial, see section 3.3.1.2.
         Bx2 = Ax + 0.001
@@ -123,10 +147,10 @@ class AlgorithmPhreaticLine(Algorithm):
             Bz2 = self.phreatic_level_embankment_top_waterside
         elif self.B_offset is not None:
             # user defined offset
-            Bz2 = self.river_level - self.B_offset
+            Bz2 = self.river_level_mhw - self.B_offset
         else:
             # default offset
-            Bz2 = self.river_level - 0.5 * h
+            Bz2 = self.river_level_mhw - 0.5 * h
 
         # Point B3 (SAND ON SAND) Linear interpolation between point A and point E, limited by minimum value ZB;initial, see section 3.3.1.2.
         Bx3 = Ax + 0.001
@@ -144,9 +168,9 @@ class AlgorithmPhreaticLine(Algorithm):
         if self.phreatic_level_embankment_top_landside is not None:
             Cz1 = self.phreatic_level_embankment_top_landside
         elif self.C_offset is not None:
-            Cz1 = self.river_level - self.C_offset
+            Cz1 = self.river_level_mhw - self.C_offset
         else:
-            Cz1 = self.river_level - 1.5
+            Cz1 = self.river_level_mhw - 1.5
 
         # Point C2 (SAND ON CLAY) Linear interpolation between point B and point E, limited by minimum value ZC;initial, see section 3.3.1.2.
         if self.phreatic_level_embankment_top_landside is not None:
@@ -251,7 +275,7 @@ class AlgorithmPhreaticLine(Algorithm):
         )
 
         # create the final points, start with the leftmost point
-        final_points = [[self.ds.left, self.river_level], abcdef[0]]
+        final_points = [[self.ds.left, self.river_level_mhw], abcdef[0]]
         # now add the points
         for x in check_points:
             for i in range(1, len(abcdef)):
@@ -269,6 +293,94 @@ class AlgorithmPhreaticLine(Algorithm):
 
         # add F and the rightmost point
         final_points += [abcdef[-1], [ds.right, self.polder_level]]
-
         ds.set_phreatic_line(final_points)
+
+        # For scenario “Sand dike on sand” (2B), only PL1 (Phreatic line) is created
+        if ds.material_layout == MaterialLayoutType.SAND_EMBANKEMENT_ON_SAND:
+            return ds
+
+        # if we have no aquifer then we have no PL2, PL3 or PL4
+        if self.aquifer_label is None:
+            return ds
+
+        #######
+        # PL2 #
+        #######
+        if self.penetration_layer_thickness is not None:
+            if self.hydraulic_head_pl2_inward is None:
+                self.hydraulic_head_pl2_inward = self.river_level_ghw
+            else:
+                self.hydraulic_head_pl2_inward = min(
+                    self.hydraulic_head_pl2_inward, self.river_level_ghw
+                )
+            if self.hydraulic_head_pl2_outward is None:
+                self.hydraulic_head_pl2_outward = self.river_level_ghw
+            else:
+                self.hydraulic_head_pl2_outward = min(
+                    self.hydraulic_head_pl2_outward, self.river_level_ghw
+                )
+
+            pl2points = [
+                [ds.left, self.hydraulic_head_pl2_inward],
+                [ds.right, self.hydraulic_head_pl2_outward],
+            ]
+
+            # add the headline
+            hl_id = ds.model.add_head_line(
+                points=[Point(x=p[0], z=p[1]) for p in pl2points],
+                label="Stijghoogtelijn 2 (PL2)",
+                scenario_index=ds.current_scenario_index,
+                stage_index=ds.current_stage_index,
+            )
+
+            # get the aquifer layer
+            aquifer_layer = ds.get_layer_by_label(self.aquifer_label)
+            aquifer_points = get_top_of_polygon(
+                [[float(p.X), float(p.Z)] for p in aquifer_layer.Points]
+            )
+            # add the penetration_layer_thickness
+            aquifer_points = [
+                [p[0], p[1] + self.penetration_layer_thickness] for p in aquifer_points
+            ]
+
+            # add the referenceline
+            ds.model.add_reference_line(
+                points=[Point(x=p[0], z=p[1]) for p in aquifer_points],
+                bottom_headline_id=hl_id,
+                top_head_line_id=hl_id,
+                label="Indringingszone onderste aquifer",
+                scenario_index=ds.current_scenario_index,
+                stage_index=ds.current_stage_index,
+            )
+
+        return ds
+
+        # TODO !
+        #######
+        # PL3 #
+        #######
+        A1A = [ds.left, self.river_level_mhw]
+        B1A = [
+            ds.get_characteristic_point(
+                CharacteristicPointType.EMBANKEMENT_TOE_WATER_SIDE
+            ).x,
+            self.river_level_ghw,
+        ]
+        C1A = [
+            ds.get_characteristic_point(
+                CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE
+            ).x,
+            0.0,
+        ]
+        D1A = [
+            Ex,
+            ds.z_at(Ex),
+        ]
+        # TODO > auto adjust for uplift
+        E1A = []
+        F1A = []
+        G1A = [
+            ds.right,
+        ]
+
         return ds

@@ -506,6 +506,16 @@ class DStability(BaseModel):
                 return hl
         raise ValueError(f"No headline with label '{label}' in this model.")
 
+    def get_layer_by_label(self, label: str = "") -> Dict:
+        geom = self.model._get_geometry(
+            self.current_scenario_index, self.current_stage_index
+        )
+        for layer in geom.Layers:
+            if layer.Label == label:
+                return layer
+
+        raise ValueError(f"Layer not found, unknown layer label '{label}'")
+
     def get_headline_coordinates(self, label: str) -> List[Tuple[float, float]]:
         """Get the coordinates of the given headline
 
@@ -687,6 +697,7 @@ class DStability(BaseModel):
                     "points": [(float(p.X), float(p.Z)) for p in layer.Points],
                     "soil": self.soils[soillayers[layer.Id]],
                     "layer_id": layer.Id,
+                    "label": layer.Label,
                 }
             )
 

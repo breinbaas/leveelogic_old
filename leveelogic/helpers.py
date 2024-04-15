@@ -421,3 +421,31 @@ def plot_soilpolygons(
     ax.set_ylim(min(ys), max(ys))
 
     return fig
+
+
+def get_top_of_polygon(points: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+    """Get the coordinates of the top of a polygon from left to right
+
+    Args:
+        points (List[Tuple[float, float]]): The points on the polygon
+
+    Returns:
+        List[Tuple[float, float]]: The line on top of the polygon
+    """
+    left = min([p[0] for p in points])
+    topleft_point = sorted([p for p in points if p[0] == left], key=lambda x: x[1])[-1]
+
+    # get the rightmost points
+    right = max([p[0] for p in points])
+    rightmost_point = sorted([p for p in points if p[0] == right], key=lambda x: x[1])[
+        -1
+    ]
+
+    # get the index of leftmost point
+    idx_left = points.index(topleft_point)
+    result = points[idx_left:] + points[:idx_left]
+
+    # get the index of the rightmost point
+    idx_right = points.index(rightmost_point)
+    result = result[: idx_right + 1]
+    return result
