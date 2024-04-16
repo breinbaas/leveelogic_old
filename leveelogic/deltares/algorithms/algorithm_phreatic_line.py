@@ -1,5 +1,6 @@
 from copy import deepcopy
 from typing import List, Tuple, Optional
+from math import exp
 
 from ...geolib.geometry import Point
 from .algorithm import (
@@ -10,7 +11,23 @@ from .algorithm import (
 from ...helpers import polyline_polyline_intersections, get_top_of_polygon
 from ..dstability import DStability, MaterialLayoutType
 from ...geometry.characteristic_point import CharacteristicPointType
-from ...helpers import line_polyline_intersections
+from ...helpers import line_polyline_intersections, lin_interpol
+
+
+def f_phi2(x, phi2_in, phi2_out, x_left, x_right) -> float:
+    return phi2_out + (phi2_in - phi2_out) / (x_right - x_left) * (x - x_left)
+
+
+def f_phi34(mhw, ghw, gamma_pl_out, gamma_pl_in, phi2) -> float:
+    return phi2 + (mhw - ghw) / (1 + gamma_pl_out / gamma_pl_in)
+
+
+def f_phi3_x(phi3_crest_out, phi2_crest_out, dX, lambda_pl3_in, phi2_x) -> float:
+    return (phi3_crest_out - phi2_crest_out) * exp(-dX / lambda_pl3_in) + phi2_x
+
+
+def f_phi4_x(phi3_crest_out, phi2_crest_out, dX, lambda_pl4_in, phi2_x) -> float:
+    return (phi3_crest_out - phi2_crest_out) * exp(-dX / lambda_pl4_in) + phi2_x
 
 
 class AlgorithmPhreaticLine(Algorithm):
@@ -26,11 +43,14 @@ class AlgorithmPhreaticLine(Algorithm):
     phreatic_level_embankment_top_landside: Optional[float] = None
     aquifer_label: Optional[str] = None
     aquifer_inside_aquitard_label: Optional[str] = None
-    penetration_layer_thickness: Optional[float] = (
-        1.0  # default 1.0 or 3.0 for tidal zones
-    )
+    intrusion_length: Optional[float] = 1.0  # default 1.0 or 3.0 for tidal zones
     hydraulic_head_pl2_inward: Optional[float] = None
     hydraulic_head_pl2_outward: Optional[float] = None
+    inward_leakage_length_pl3: Optional[float] = None
+    outward_leakage_length_pl3: Optional[float] = None
+    inward_leakage_length_pl4: Optional[float] = None
+    outward_leakage_length_pl4: Optional[float] = None
+
     adjust_for_uplift: bool = False
 
     def _check_input(self):
@@ -74,6 +94,14 @@ class AlgorithmPhreaticLine(Algorithm):
                 raise AlgorithmInputCheckError(
                     f"Invalid aquifer label ('{self.aquifer_label}') given"
                 )
+            if self.outward_leakage_length_pl3 is None:
+                raise AlgorithmInputCheckError(
+                    f"Added an aquifer but no outward leakage length for PL3"
+                )
+            if self.inward_leakage_length_pl3 is None:
+                raise AlgorithmInputCheckError(
+                    f"Added an aquifer but no inward leakage length for PL3"
+                )
 
         if self.aquifer_inside_aquitard_label is not None:
             try:
@@ -81,6 +109,14 @@ class AlgorithmPhreaticLine(Algorithm):
             except Exception as e:
                 raise AlgorithmInputCheckError(
                     f"Invalid aquifer inside aquitard label ('{self.aquifer_inside_aquitard_label}') given"
+                )
+            if self.outward_leakage_length_pl4 is None:
+                raise AlgorithmInputCheckError(
+                    f"Added an aquifer but no outward leakage length for PL4"
+                )
+            if self.inward_leakage_length_pl4 is None:
+                raise AlgorithmInputCheckError(
+                    f"Added an aquifer but no inward leakage length for PL4"
                 )
 
         return True
@@ -331,7 +367,7 @@ class AlgorithmPhreaticLine(Algorithm):
         #######
         # PL2 #
         #######
-        if self.penetration_layer_thickness is not None:
+        if self.intrusion_length is not None:
             if self.hydraulic_head_pl2_inward is None:
                 self.hydraulic_head_pl2_inward = self.river_level_ghw
             else:
@@ -360,7 +396,7 @@ class AlgorithmPhreaticLine(Algorithm):
 
             # add the penetration_layer_thickness
             aquifer_points_with_penetration_layer = [
-                [p[0], p[1] + self.penetration_layer_thickness] for p in aquifer_points
+                [p[0], p[1] + self.intrusion_length] for p in aquifer_points
             ]
 
             # add the referenceline
@@ -378,7 +414,7 @@ class AlgorithmPhreaticLine(Algorithm):
         #######
         # PL3 #
         #######
-        # TODO !
+
         A1B = [ds.left, self.river_level_mhw]
         B1B = [
             ds.get_characteristic_point(
@@ -387,6 +423,7 @@ class AlgorithmPhreaticLine(Algorithm):
             self.river_level_mhw,
         ]
 
+        # SCENARIO 1B - Clay on sand
         if self.ds.material_layout == MaterialLayoutType.CLAY_EMBANKEMENT_ON_SAND:
             D1B = (Ex, ds.z_at(Ex))
             G1B = (ds.right, D1B[1])
@@ -406,31 +443,120 @@ class AlgorithmPhreaticLine(Algorithm):
                 scenario_index=ds.current_scenario_index,
                 stage_index=ds.current_stage_index,
             )
-        else:
-            raise NotImplementedError("PL3 for 1A and 2A is not yet implemented!")
-            C1A = [
-                ds.get_characteristic_point(
-                    CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE
-                ).x,
-                0.0,
-            ]
-            D1A = [
-                Ex,
-                ds.z_at(Ex),
-            ]
-            # TODO > auto adjust for uplift
-            E1A = []
-            F1A = []
-            G1A = [
+        else:  # SCENARIO 1A and 2A - sand on clay / clay on clay
+            x_embankment_top_water_side = ds.get_characteristic_point(
+                CharacteristicPointType.EMBANKEMENT_TOP_WATER_SIDE
+            ).x
+            phi2_embankment_top_waterside = f_phi2(
+                x_embankment_top_water_side,
+                self.hydraulic_head_pl2_inward,
+                self.hydraulic_head_pl2_outward,
+                ds.left,
                 ds.right,
+            )
+            C1A_PL3 = [
+                x_embankment_top_water_side,
+                f_phi34(
+                    self.river_level_mhw,
+                    self.river_level_ghw,
+                    self.outward_leakage_length_pl3,
+                    self.inward_leakage_length_pl3,
+                    phi2_embankment_top_waterside,
+                ),
             ]
+            if self.aquifer_inside_aquitard_label is not None:
+                C1A_PL4 = [
+                    x_embankment_top_water_side,
+                    f_phi34(
+                        self.river_level_mhw,
+                        self.river_level_ghw,
+                        self.outward_leakage_length_pl4,
+                        self.inward_leakage_length_pl4,
+                        phi2_embankment_top_waterside,
+                    ),
+                ]
+
+            # NOTE phi3_crest_out = C1A_PL3[1]
+            #      phi4_crest_out = C1A_PL4[1]
+            if not self.adjust_for_uplift:
+                x_embankment_toe_land_side = ds.get_characteristic_point(
+                    CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE
+                ).x
+                phi2_crest_out = f_phi2(
+                    x_embankment_top_water_side,
+                    self.hydraulic_head_pl2_inward,
+                    self.hydraulic_head_pl2_outward,
+                    ds.left,
+                    ds.right,
+                )
+                phi_2_embankment_toe_land_side = f_phi2(
+                    x_embankment_toe_land_side,
+                    self.hydraulic_head_pl2_inward,
+                    self.hydraulic_head_pl2_outward,
+                    ds.left,
+                    ds.right,
+                )
+                dx = x_embankment_toe_land_side - x_embankment_top_water_side
+                z_d1a = phi_2_embankment_toe_land_side + (
+                    C1A_PL3[1] - phi2_crest_out
+                ) * exp(-dx / self.inward_leakage_length_pl3)
+                D1A = [x_embankment_toe_land_side, z_d1a]
+
+                if self.aquifer_inside_aquitard_label is not None:
+                    z_d2a = phi_2_embankment_toe_land_side + (
+                        C1A_PL3[1] - phi2_crest_out
+                    ) * exp(-dx / self.inward_leakage_length_pl4)
+                    D2A = [x_embankment_toe_land_side, z_d2a]
+
+                dx = ds.right - x_embankment_top_water_side
+                z_g1a = phi_2_embankment_toe_land_side + (
+                    C1A_PL3[1] - phi2_crest_out
+                ) * exp(-dx / self.inward_leakage_length_pl3)
+                G1A = [ds.right, z_g1a]
+
+                if self.aquifer_inside_aquitard_label is not None:
+                    z_g2a = phi_2_embankment_toe_land_side + (
+                        C1A_PL3[1] - phi2_crest_out
+                    ) * exp(-dx / self.inward_leakage_length_pl4)
+                    G2A = [ds.right, z_g2a]
+
+                pl3_id = ds.model.add_head_line(
+                    points=[
+                        Point(x=p[0], z=p[1]) for p in [A1B, B1B, C1A_PL3, D1A, G1A]
+                    ],
+                    label="Stijghoogtelijn 3 (PL3)",
+                    scenario_index=ds.current_scenario_index,
+                    stage_index=ds.current_stage_index,
+                )
+
+                ds.model.add_reference_line(
+                    points=[Point(x=p[0], z=p[1]) for p in aquifer_points],
+                    bottom_headline_id=pl3_id,
+                    top_head_line_id=pl3_id,
+                    label="Waternetlijn onderste aquifer",
+                    scenario_index=ds.current_scenario_index,
+                    stage_index=ds.current_stage_index,
+                )
+                if self.aquifer_inside_aquitard_label is not None:
+                    pl4_id = ds.model.add_head_line(
+                        points=[
+                            Point(x=p[0], z=p[1]) for p in [A1B, B1B, C1A_PL4, D2A, G2A]
+                        ],
+                        label="Stijghoogtelijn 4 (PL4)",
+                        scenario_index=ds.current_scenario_index,
+                        stage_index=ds.current_stage_index,
+                    )
+                    # add referenceline but where...
+
+            else:
+                raise NotImplementedError(
+                    "Scenario with correction for uplift not yet implemented!"
+                )
 
         ########
         # PL 4 #
         ########
 
         # There is only a PL4 if we have a aquifer inside aquitard label
-        if self.aquifer_inside_aquitard_label is None:
-            return ds
 
         return ds

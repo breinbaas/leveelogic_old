@@ -449,3 +449,7 @@ def get_top_of_polygon(points: List[Tuple[float, float]]) -> List[Tuple[float, f
     idx_right = points.index(rightmost_point)
     result = result[: idx_right + 1]
     return result
+
+
+def lin_interpol(x, x1, y1, x2, y2):
+    return y1 + (y2 - y1) / (x2 - x1) * (x - x1)

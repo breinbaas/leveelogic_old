@@ -16,26 +16,35 @@ class TestAlgorithmPhreaticLineStix:
         alg = AlgorithmPhreaticLine(
             ds=ds,
             river_level_mhw=18,
-            river_level_ghw=11,
+            river_level_ghw=14,
             polder_level=8,
+            aquifer_label="L 4",
+            hydraulic_head_pl2_inward=10,
+            hydraulic_head_pl2_outward=10,
+            intrusion_length=1,
+            inward_leakage_length_pl3=750,
+            outward_leakage_length_pl3=10,
+            aquifer_inside_aquitard_label="L 2",
+            inward_leakage_length_pl4=400,
+            outward_leakage_length_pl4=5,
         )
         ds = alg.execute()
-        pts_new_pl1 = ds.phreatic_line_points
-        plt.figure(figsize=(15, 5))
-        plt.plot(
-            [p[0] for p in pts_old_pl1],
-            [p[1] for p in pts_old_pl1],
-            "b--",
-            label="PL1 solution",
-        )
-        plt.plot(
-            [p[0] for p in pts_new_pl1],
-            [p[1] for p in pts_new_pl1],
-            "k-",
-            label="PL1 algorithm",
-        )
-        plt.legend()
-        plt.savefig("tests/testdata/output/test_pl_clay_on_clay.png")
+        # pts_new_pl1 = ds.phreatic_line_points
+        # plt.figure(figsize=(15, 5))
+        # plt.plot(
+        #     [p[0] for p in pts_old_pl1],
+        #     [p[1] for p in pts_old_pl1],
+        #     "b--",
+        #     label="PL1 solution",
+        # )
+        # plt.plot(
+        #     [p[0] for p in pts_new_pl1],
+        #     [p[1] for p in pts_new_pl1],
+        #     "k-",
+        #     label="PL1 algorithm",
+        # )
+        # plt.legend()
+        # plt.savefig("tests/testdata/output/test_pl_clay_on_clay.png")
         ds.serialize("tests/testdata/output/test_pl_clay_on_clay.stix")
 
     def test_clay_on_sand(self):
@@ -53,9 +62,12 @@ class TestAlgorithmPhreaticLineStix:
             river_level_mhw=18,
             river_level_ghw=11,
             polder_level=8,
+            aquifer_label="L 3",
             hydraulic_head_pl2_inward=10,
             hydraulic_head_pl2_outward=10,
-            aquifer_label="L 3",
+            intrusion_length=1,
+            inward_leakage_length_pl3=750,
+            outward_leakage_length_pl3=10,
         )
         ds = alg.execute()
         pts_new_pl1 = ds.phreatic_line_points
