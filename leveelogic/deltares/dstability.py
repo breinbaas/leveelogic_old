@@ -622,6 +622,47 @@ class DStability(BaseModel):
         self._post_process()
         return phreatic_line_id
 
+    def stresses_at(self, x: float) -> List[Tuple[float, float, float, float]]:
+        """Get the soil stresses at the given x coordinate
+
+        Args:
+            x (float): The x coordinate in the model
+
+        Returns:
+            List[float, float, float, float]: List of [depth, total stress, waterpressure, effective stress]
+        """
+        sp1 = self.soilprofile1_at(
+            x, self.current_scenario_index, self.current_stage_index
+        )
+        stresses = []
+        stot, u, seff = 0.0, 0.0, 0.0
+        return stresses
+
+    def waterlevel_at(self, x: float) -> float:
+        """Get the phreatic waterlevel at the given x coordinate
+
+        Args:
+            x (float): The x coordinate in the model
+
+        Returns:
+            float: The waterlevel at the given location or None if no phreatic line is available
+        """
+        if not self.has_phreatic_line:
+            return None
+
+        zmax = max(self.top, max([p[1] for p in self.phreatic_line_points]))
+        zmin = min(self.bottom, max([p[1] for p in self.phreatic_line_points]))
+
+        line = [(x, zmax), (x, zmin)]
+        intersections = polyline_polyline_intersections(line, self.phreatic_line_points)
+
+        if len(intersections) != 1:
+            raise ValueError(
+                f"Invalid waterlevel_at outcome, no or more than one intersection at the given x coordinate."
+            )
+
+        return intersections[0][1]
+
     def _post_process(self):
         """Do some post processing stuff to set properties and save time"""
         # get the points

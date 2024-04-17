@@ -117,3 +117,9 @@ class TestDStability:
         ds = DStability.from_stix("tests/testdata/stix/add_stage.stix")
         ds.add_stage()
         ds.serialize("tests/testdata/output/test_add_stage.stix")
+
+    def test_waterlevel_at(self):
+        ds = DStability.from_stix("tests/testdata/stix/real_sample.stix")
+        assert ds.waterlevel_at(70) == 0.0
+        assert ds.waterlevel_at(49) == -0.4
+        assert ds.waterlevel_at(41.5) == -1.2
