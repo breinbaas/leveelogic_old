@@ -666,7 +666,7 @@ class DStability(BaseModel):
         else:
             phreatic_line_id = self.model.add_head_line(
                 [Point(x=p[0], z=p[1]) for p in points],
-                "Phreatic line",
+                "Stijghoogtelijn (PL 1)",
                 is_phreatic_line=True,
                 scenario_index=self.current_scenario_index,
                 stage_index=self.current_stage_index,
@@ -674,6 +674,22 @@ class DStability(BaseModel):
         self._post_process()
         return phreatic_line_id
 
+    def get_top_layer(self) -> Optional[Dict]:
+        """Get the layer with the highest point on the geometry, this function
+        makes sense for the waternet creator where the toplayer is always one layer
+
+        Returns: Dict with layer info or None if no layer is present
+        """
+        zmax = self.bottom
+        result = None
+        for layer in self.soillayers:
+            ztop = max([p[1] for p in layer["points"]])
+            if ztop > zmax:
+                result = layer
+                zmax = ztop
+        return result
+
+    # TODO
     def stresses_at(self, x: float) -> List[Tuple[float, float, float, float]]:
         """Get the soil stresses at the given x coordinate
 
@@ -1744,3 +1760,10 @@ class DStability(BaseModel):
                 stage_index=to_stage_index,
                 label=f"RL {i+1}",
             )
+
+    def clear_waternet(self):
+        wnet_to_copy = self.model._get_waternet(
+            self.current_scenario_index, self.current_stage_index
+        )
+        wnet_to_copy.HeadLines.clear()
+        wnet_to_copy.ReferenceLines.clear()

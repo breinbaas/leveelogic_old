@@ -426,7 +426,7 @@ def plot_soilpolygons(
 
 
 def get_top_of_polygon(points: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
-    """Get the coordinates of the top of a polygon from left to right
+    """Get the coordinates of the top of a polygon from left to right, only worls for clockwise polygons
 
     Args:
         points (List[Tuple[float, float]]): The points on the polygon
@@ -439,18 +439,56 @@ def get_top_of_polygon(points: List[Tuple[float, float]]) -> List[Tuple[float, f
 
     # get the rightmost points
     right = max([p[0] for p in points])
-    rightmost_point = sorted([p for p in points if p[0] == right], key=lambda x: x[1])[
+    topright_point = sorted([p for p in points if p[0] == right], key=lambda x: x[1])[
         -1
     ]
 
     # get the index of leftmost point
     idx_left = points.index(topleft_point)
-    result = points[idx_left:] + points[:idx_left]
-
     # get the index of the rightmost point
-    idx_right = points.index(rightmost_point)
-    result = result[: idx_right + 1]
-    return result
+    idx_right = points.index(topright_point)
+
+    if idx_right > idx_left:
+        points = points[idx_left : idx_right + 1]
+    else:
+        points = points[idx_left:] + points[: idx_right + 1]
+
+    return points
+
+
+def get_bottom_of_polygon(
+    points: List[Tuple[float, float]]
+) -> List[Tuple[float, float]]:
+    """Get the coordinates of the bottom of a polygon from left to right, only works for clockwise polygons
+
+    Args:
+        points (List[Tuple[float, float]]): The points on the polygon
+
+    Returns:
+        List[Tuple[float, float]]: The line on the bottom of the polygon
+    """
+    left = min([p[0] for p in points])
+    bottomleft_point = sorted([p for p in points if p[0] == left], key=lambda x: x[1])[
+        0
+    ]
+
+    # get the rightmost points
+    right = max([p[0] for p in points])
+    bottomright_point = sorted(
+        [p for p in points if p[0] == right], key=lambda x: x[1]
+    )[0]
+
+    # get the index of leftmost point
+    idx_left = points.index(bottomleft_point)
+    # get the index of the rightmost point
+    idx_right = points.index(bottomright_point)
+
+    if idx_left > idx_right:
+        points = points[idx_right : idx_left + 1]
+    else:
+        points = points[idx_right:] + points[: idx_left + 1]
+
+    return points[::-1]
 
 
 def lin_interpol(x, x1, y1, x2, y2):

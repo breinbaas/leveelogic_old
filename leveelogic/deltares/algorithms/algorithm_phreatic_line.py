@@ -8,10 +8,16 @@ from .algorithm import (
     AlgorithmInputCheckError,
     AlgorithmExecutionError,
 )
-from ...helpers import polyline_polyline_intersections, get_top_of_polygon
+
 from ..dstability import DStability, MaterialLayoutType
 from ...geometry.characteristic_point import CharacteristicPointType
-from ...helpers import line_polyline_intersections, lin_interpol
+from ...helpers import (
+    line_polyline_intersections,
+    lin_interpol,
+    polyline_polyline_intersections,
+    get_top_of_polygon,
+    get_bottom_of_polygon,
+)
 
 
 def f_phi2(x, phi2_in, phi2_out, x_left, x_right) -> float:
@@ -42,11 +48,15 @@ class AlgorithmPhreaticLine(Algorithm):
     phreatic_level_embankment_top_waterside: Optional[float] = None
     phreatic_level_embankment_top_landside: Optional[float] = None
     aquifer_label: Optional[str] = None  # it is possible to use the label or the id
-    aquifer_id: Optional[str] = None
+    aquifer_id: Optional[str] = (
+        None  # NOTE if the id is set, this will be used BEFORE the label
+    )
     aquifer_inside_aquitard_label: Optional[str] = (
         None  # it is possible to use the label or the id
     )
-    aquifer_inside_aquitard_id: Optional[str] = None
+    aquifer_inside_aquitard_id: Optional[str] = (
+        None  # NOTE if the id is set, this will be used BEFORE the label
+    )
     intrusion_length: Optional[float] = 1.0  # default 1.0 or 3.0 for tidal zones
     hydraulic_head_pl2_inward: Optional[float] = None
     hydraulic_head_pl2_outward: Optional[float] = None
@@ -135,6 +145,9 @@ class AlgorithmPhreaticLine(Algorithm):
         return True
 
     def _execute(self, ds: DStability) -> DStability:
+        if not self.add_as_new_stage:
+            # remove the water stuff
+            ds.clear_waternet()
 
         #################
         # PHREATIC LINE #
@@ -367,6 +380,9 @@ class AlgorithmPhreaticLine(Algorithm):
                     if z_pl > z_surface - 0.01:
                         z_pl = z_surface - 0.01
 
+                    if z_pl > final_points[-1][1]:
+                        z_pl = final_points[-1][1]
+
                     final_points.append([x, z_pl])
                     break
 
@@ -374,7 +390,7 @@ class AlgorithmPhreaticLine(Algorithm):
         final_points += [abcdef[-1], [ds.right, self.polder_level]]
         pl_id = ds.set_phreatic_line(final_points)
 
-        # Add the referenceline
+        # Add the referenceline for the phreatic zone top
         ds.model.add_reference_line(
             points=[Point(x=p[0], z=p[1]) for p in ds.surface],
             top_head_line_id=pl_id,
@@ -383,9 +399,17 @@ class AlgorithmPhreaticLine(Algorithm):
             stage_index=ds.current_stage_index,
             label="Freatische zone bovenkant",
         )
-
-        # only PL1
-        # return ds
+        # Add the referenceline for the phreatic zone bottom 1 (bottom of the top layer)
+        toplayer_points = ds.get_top_layer()["points"]
+        bottom_line_pl1 = get_bottom_of_polygon(toplayer_points)
+        ds.model.add_reference_line(
+            points=[Point(x=p[0], z=p[1]) for p in bottom_line_pl1],
+            top_head_line_id=pl_id,
+            bottom_headline_id=pl_id,
+            scenario_index=ds.current_scenario_index,
+            stage_index=ds.current_stage_index,
+            label="Freatische zone onderkant (1)",
+        )
 
         # For scenario “Sand dike on sand” (2B), only PL1 (Phreatic line) is created
         if ds.material_layout == MaterialLayoutType.SAND_EMBANKEMENT_ON_SAND:
@@ -395,8 +419,13 @@ class AlgorithmPhreaticLine(Algorithm):
         if self.aquifer_label is None and self.aquifer_id is None:
             return ds
 
-        # get the aquifer layer
-        aquifer_layer = ds.get_layer_by_label(self.aquifer_label)
+        # get the aquifer layer, note that the check if the layer exists already takes place in check_input
+        aquifer_layer = None
+        if self.aquifer_id is not None:
+            aquifer_layer = ds.get_layer_by_id(self.aquifer_id)
+        elif self.aquifer_label is not None:
+            aquifer_layer = ds.get_layer_by_label(self.aquifer_label)
+
         aquifer_points = get_top_of_polygon(
             [[float(p.X), float(p.Z)] for p in aquifer_layer.Points]
         )
