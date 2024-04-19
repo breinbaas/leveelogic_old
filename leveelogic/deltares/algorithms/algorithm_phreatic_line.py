@@ -41,8 +41,12 @@ class AlgorithmPhreaticLine(Algorithm):
     surface_offset: float = 0.01
     phreatic_level_embankment_top_waterside: Optional[float] = None
     phreatic_level_embankment_top_landside: Optional[float] = None
-    aquifer_label: Optional[str] = None
-    aquifer_inside_aquitard_label: Optional[str] = None
+    aquifer_label: Optional[str] = None  # it is possible to use the label or the id
+    aquifer_id: Optional[str] = None
+    aquifer_inside_aquitard_label: Optional[str] = (
+        None  # it is possible to use the label or the id
+    )
+    aquifer_inside_aquitard_id: Optional[str] = None
     intrusion_length: Optional[float] = 1.0  # default 1.0 or 3.0 for tidal zones
     hydraulic_head_pl2_inward: Optional[float] = None
     hydraulic_head_pl2_outward: Optional[float] = None
@@ -87,12 +91,15 @@ class AlgorithmPhreaticLine(Algorithm):
                 "The adjust for uplift feature is not yet implemented."
             )
 
-        if self.aquifer_label is not None:
+        if self.aquifer_label is not None or self.aquifer_id is not None:
             try:
-                self.ds.get_layer_by_label(self.aquifer_label)
+                if self.aquifer_label is not None:
+                    self.ds.get_layer_by_label(self.aquifer_label)
+                else:
+                    self.ds.get_layer_by_id(self.aquifer_id)
             except Exception as e:
                 raise AlgorithmInputCheckError(
-                    f"Invalid aquifer label ('{self.aquifer_label}') given"
+                    f"Invalid aquifer label ('{self.aquifer_label}') and/or aquifer id ('{self.aquifer_id}') given"
                 )
             if self.outward_leakage_length_pl3 is None:
                 raise AlgorithmInputCheckError(
@@ -103,12 +110,18 @@ class AlgorithmPhreaticLine(Algorithm):
                     f"Added an aquifer but no inward leakage length for PL3"
                 )
 
-        if self.aquifer_inside_aquitard_label is not None:
+        if (
+            self.aquifer_inside_aquitard_label is not None
+            or self.aquifer_inside_aquitard_id is not None
+        ):
             try:
-                self.ds.get_layer_by_label(self.aquifer_inside_aquitard_label)
+                if self.aquifer_inside_aquitard_label is not None:
+                    self.ds.get_layer_by_label(self.aquifer_inside_aquitard_label)
+                else:
+                    self.ds.get_layer_by_id(self.aquifer_inside_aquitard_id)
             except Exception as e:
                 raise AlgorithmInputCheckError(
-                    f"Invalid aquifer inside aquitard label ('{self.aquifer_inside_aquitard_label}') given"
+                    f"Invalid aquifer inside aquitard label ('{self.aquifer_inside_aquitard_label}') or id ('{self.aquifer_inside_aquitard_id}') given"
                 )
             if self.outward_leakage_length_pl4 is None:
                 raise AlgorithmInputCheckError(
@@ -121,18 +134,13 @@ class AlgorithmPhreaticLine(Algorithm):
 
         return True
 
-    def _execute(self) -> DStability:
-        if self.add_as_new_stage:
-            ds = self.ds
-            ds.add_stage()
-        else:
-            ds = deepcopy(self.ds)
+    def _execute(self, ds: DStability) -> DStability:
 
         #################
         # PHREATIC LINE #
         #################
         # height River waterlevel - Dike toe level
-        x = self.ds.get_characteristic_point(
+        x = ds.get_characteristic_point(
             CharacteristicPointType.EMBANKEMENT_TOE_LAND_SIDE
         ).x
         h = self.river_level_mhw - ds.z_at(x)
@@ -175,8 +183,18 @@ class AlgorithmPhreaticLine(Algorithm):
         Ez3 = max(self.polder_level, Ez3)
 
         # Point B1 (CLAY DIKE) River water level minus offset, with default offset 1 m, limited by minimum value ZB;initial, see section 3.3.1.2.
+        # TODO
+        # There seems to be an inconsitency in DStability
+        # If you fill in 0.0 for the values under Phreatic level in embankment at points
+        # Then the z values will be calculated but if you fill in another value
+        # these will be used as the z values
+        # in other words, it is not possible to fill in 0.0 as the actual waterlevel
+        # Unfortunately we need to also make use of this method
         Bx1 = Ax + 1.0
-        if self.phreatic_level_embankment_top_waterside is not None:
+        if (
+            self.phreatic_level_embankment_top_waterside is not None
+            and self.phreatic_level_embankment_top_waterside != 0.0
+        ):
             # user defined pl
             Bz1 = self.phreatic_level_embankment_top_waterside
         elif self.B_offset is not None:
@@ -187,7 +205,10 @@ class AlgorithmPhreaticLine(Algorithm):
 
         # Point B2 (SAND ON CLAY) River water level minus offset, with default offset 0.5 × (river level - dike toe polder level), limited by minimum value ZB;initial, see section 3.3.1.2.
         Bx2 = Ax + 0.001
-        if self.phreatic_level_embankment_top_waterside is not None:
+        if (
+            self.phreatic_level_embankment_top_waterside is not None
+            and self.phreatic_level_embankment_top_waterside != 0.0
+        ):
             # user defined pl
             Bz2 = self.phreatic_level_embankment_top_waterside
         elif self.B_offset is not None:
@@ -199,7 +220,10 @@ class AlgorithmPhreaticLine(Algorithm):
 
         # Point B3 (SAND ON SAND) Linear interpolation between point A and point E, limited by minimum value ZB;initial, see section 3.3.1.2.
         Bx3 = Ax + 0.001
-        if self.phreatic_level_embankment_top_waterside is not None:
+        if (
+            self.phreatic_level_embankment_top_waterside is not None
+            and self.phreatic_level_embankment_top_waterside != 0.0
+        ):
             # user defined pl
             Bz3 = self.phreatic_level_embankment_top_waterside
         else:
@@ -207,10 +231,14 @@ class AlgorithmPhreaticLine(Algorithm):
             Bz3 = Az + (Bx3 - Ax) / (Ex - Ax) * (Ez3 - Az)
 
         # Point C1 (CLAY DIKE) River water level minus offset, with default offset 1.5 m, limited by minimum value ZC;initial, see section 3.3.1.2.
+        # TODO > Same inconsistency as point B, only solvable if DStab is fixed
         Cx = ds.get_characteristic_point(
             CharacteristicPointType.EMBANKEMENT_TOP_LAND_SIDE
         ).x
-        if self.phreatic_level_embankment_top_landside is not None:
+        if (
+            self.phreatic_level_embankment_top_landside is not None
+            and self.phreatic_level_embankment_top_landside != 0.0
+        ):
             Cz1 = self.phreatic_level_embankment_top_landside
         elif self.C_offset is not None:
             Cz1 = self.river_level_mhw - self.C_offset
@@ -218,13 +246,19 @@ class AlgorithmPhreaticLine(Algorithm):
             Cz1 = self.river_level_mhw - 1.5
 
         # Point C2 (SAND ON CLAY) Linear interpolation between point B and point E, limited by minimum value ZC;initial, see section 3.3.1.2.
-        if self.phreatic_level_embankment_top_landside is not None:
+        if (
+            self.phreatic_level_embankment_top_landside is not None
+            and self.phreatic_level_embankment_top_landside != 0.0
+        ):
             Cz2 = self.phreatic_level_embankment_top_landside
         else:
             Cz2 = Bz2 + (Cx - Bx2) / (Ex - Bx2) * (Ez2 - Bz2)
 
         # Point C3 (SAND ON SAND) Linear interpolation between point A and point E, limited by minimum value ZC;initial, see section 3.3.1.2.
-        if self.phreatic_level_embankment_top_landside is not None:
+        if (
+            self.phreatic_level_embankment_top_landside is not None
+            and self.phreatic_level_embankment_top_landside != 0.0
+        ):
             Cz3 = self.phreatic_level_embankment_top_landside
         else:
             Cz3 = Az + (Cx - Ax) / (Ex - Ax) * (Ez3 - Az)
@@ -253,10 +287,10 @@ class AlgorithmPhreaticLine(Algorithm):
             else:
                 Dz3 = Az + (Dx - Ax) / (Ex - Ax) * (Ez3 - Az)
         else:  # add D as lin interpolated point between C and E
-            Dx = (Ex - Cx) / 2.0
-            Dz1 = (Ez1 - Cz1) / 2.0
-            Dz2 = (Ez2 - Cz2) / 2.0
-            Dz3 = (Ez3 - Cz3) / 2.0
+            Dx = (Ex + Cx) / 2.0
+            Dz1 = (Ez1 + Cz1) / 2.0
+            Dz2 = (Ez2 + Cz2) / 2.0
+            Dz3 = (Ez3 + Cz3) / 2.0
 
         # Point D must be equal to or above polder level
         Dz1 = max(self.polder_level, Dz1)
@@ -291,16 +325,16 @@ class AlgorithmPhreaticLine(Algorithm):
             Fx3 = Ex + (Ez3 - Fz) * (Ex - Cx) / (Ez3 - Cz3)
 
         if (
-            self.ds.material_layout == MaterialLayoutType.CLAY_EMBANKEMENT_ON_CLAY
-            or self.ds.material_layout == MaterialLayoutType.CLAY_EMBANKEMENT_ON_SAND
+            ds.material_layout == MaterialLayoutType.CLAY_EMBANKEMENT_ON_CLAY
+            or ds.material_layout == MaterialLayoutType.CLAY_EMBANKEMENT_ON_SAND
         ):
             abcdef = [[Ax, Az], [Bx1, Bz1], [Cx, Cz1], [Dx, Dz1], [Ex, Ez1], [Fx1, Fz]]
-        elif self.ds.material_layout == MaterialLayoutType.SAND_EMBANKEMENT_ON_CLAY:
+        elif ds.material_layout == MaterialLayoutType.SAND_EMBANKEMENT_ON_CLAY:
             abcdef = [[Ax, Az], [Bx2, Bz2], [Cx, Cz2], [Dx, Dz2], [Ex, Ez2], [Fx2, Fz]]
-        elif self.ds.material_layout == MaterialLayoutType.SAND_EMBANKEMENT_ON_SAND:
+        elif ds.material_layout == MaterialLayoutType.SAND_EMBANKEMENT_ON_SAND:
             abcdef = [[Ax, Az], [Bx3, Bz3], [Cx, Cz3], [Dx, Dz3], [Ex, Ez3], [Fx3, Fz]]
         else:
-            raise ValueError(f"Unknown material layout '{self.ds.material_layout}'")
+            raise ValueError(f"Unknown material layout '{ds.material_layout}'")
 
         # Make sure the phreatic line does not exceed the surface
         # Between A and F
@@ -320,7 +354,7 @@ class AlgorithmPhreaticLine(Algorithm):
         )
 
         # create the final points, start with the leftmost point
-        final_points = [[self.ds.left, self.river_level_mhw], abcdef[0]]
+        final_points = [[ds.left, self.river_level_mhw], abcdef[0]]
         # now add the points
         for x in check_points:
             for i in range(1, len(abcdef)):
@@ -350,12 +384,15 @@ class AlgorithmPhreaticLine(Algorithm):
             label="Freatische zone bovenkant",
         )
 
+        # only PL1
+        # return ds
+
         # For scenario “Sand dike on sand” (2B), only PL1 (Phreatic line) is created
         if ds.material_layout == MaterialLayoutType.SAND_EMBANKEMENT_ON_SAND:
             return ds
 
         # if we have no aquifer then we have no PL2, PL3 or PL4
-        if self.aquifer_label is None:
+        if self.aquifer_label is None and self.aquifer_id is None:
             return ds
 
         # get the aquifer layer
@@ -424,7 +461,7 @@ class AlgorithmPhreaticLine(Algorithm):
         ]
 
         # SCENARIO 1B - Clay on sand
-        if self.ds.material_layout == MaterialLayoutType.CLAY_EMBANKEMENT_ON_SAND:
+        if ds.material_layout == MaterialLayoutType.CLAY_EMBANKEMENT_ON_SAND:
             D1B = (Ex, ds.z_at(Ex))
             G1B = (ds.right, D1B[1])
 

@@ -5,6 +5,8 @@ from shapely.geometry import Point, LineString, MultiPoint
 import re
 from matplotlib.pyplot import Figure
 from matplotlib.patches import Polygon as MPolygon
+from typing import Optional
+from math import isnan
 
 from .settings import (
     nen5104_sand_dict,
@@ -453,3 +455,25 @@ def get_top_of_polygon(points: List[Tuple[float, float]]) -> List[Tuple[float, f
 
 def lin_interpol(x, x1, y1, x2, y2):
     return y1 + (y2 - y1) / (x2 - x1) * (x - x1)
+
+
+def string_to_float(s: str) -> Optional[float]:
+    """Get a float from a string
+
+    This function is necessary because Deltares returns values like
+    '23.0' or 'Nan' so it isn't trivial to convert to float
+
+    Args:
+        s (str): The value to convert
+
+    Returns:
+        Optional[float]: Returns the floating point value or None if unsuccesful
+    """
+    try:
+        f = float(s)
+        if not isnan(f):
+            return f
+    except:
+        pass
+
+    return None

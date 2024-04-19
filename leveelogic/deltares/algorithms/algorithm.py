@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List
 import abc
 from ..dstability import DStability
+from copy import deepcopy
 
 
 class AlgorithmExecutionError(Exception):
@@ -21,6 +22,7 @@ class Algorithm(BaseModel, metaclass=abc.ABCMeta):
     ds: DStability
     log: List[str] = []
     add_as_new_stage: bool = False
+    new_stage_name: str = "New Stage"
 
     def execute(self) -> DStability:
         try:
@@ -30,7 +32,11 @@ class Algorithm(BaseModel, metaclass=abc.ABCMeta):
                 f"Could not execute algorithm, got error '{e}'"
             )
 
-        ds = self._execute()
+        ds = deepcopy(self.ds)
+        if self.add_as_new_stage:
+            ds.add_stage(self.new_stage_name)
+
+        ds = self._execute(ds)
         ds._post_process()
 
         return ds
@@ -49,8 +55,9 @@ class Algorithm(BaseModel, metaclass=abc.ABCMeta):
     def _check_input(self):
         raise NotImplementedError
 
-    def _execute(self) -> DStability:
+    @abc.abstractmethod
+    def _execute(self, ds: DStability) -> DStability:
         raise NotImplementedError
 
-    def _execute_multiple_results(self) -> List[DStability]:
-        raise NotImplementedError
+    # def _execute_multiple_results(self) -> List[DStability]:
+    #     raise NotImplementedError

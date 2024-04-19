@@ -44,7 +44,7 @@ from ..geolib.models.dstability.loads import Earthquake, LineLoad, UniformLoad, 
 from ..soil.soilcollection import SoilCollection
 from ..geometry.soilprofileN import SoilProfileN
 from ..geometry.soilprofile1 import SoilProfile1
-from ..helpers import polyline_polyline_intersections
+from ..helpers import polyline_polyline_intersections, string_to_float
 from ..geometry.soilpolygon import SoilPolygon
 from ..geometry.soillayer import SoilLayer
 from ..soil.soil import Soil as LLSoil
@@ -58,6 +58,14 @@ class MaterialLayoutType(IntEnum):
     SAND_EMBANKEMENT_ON_CLAY = 11
     CLAY_EMBANKEMENT_ON_SAND = 12
     SAND_EMBANKEMENT_ON_SAND = 13
+
+
+EmbankmentSoilScenarioToMaterialLayoutType = {
+    EmbankmentSoilScenarioEnum.CLAY_EMBANKMENT_ON_CLAY: MaterialLayoutType.CLAY_EMBANKEMENT_ON_CLAY,
+    EmbankmentSoilScenarioEnum.CLAY_EMBANKMENT_ON_SAND: MaterialLayoutType.CLAY_EMBANKEMENT_ON_SAND,
+    EmbankmentSoilScenarioEnum.SAND_EMBANKMENT_ON_CLAY: MaterialLayoutType.SAND_EMBANKEMENT_ON_CLAY,
+    EmbankmentSoilScenarioEnum.SAND_EMBANKMENT_ON_SAND: MaterialLayoutType.SAND_EMBANKEMENT_ON_SAND,
+}
 
 
 class DStability(BaseModel):
@@ -347,6 +355,40 @@ class DStability(BaseModel):
         """
         return len(self.ditch_points) == 4
 
+    def get_scenario_index_by_label(self, label: str) -> int:
+        """Get the scenario index by the given scenario label (case insensitive)
+
+        Args:
+            label (str): The label of the scenario
+
+        Returns:
+            int: the index or -1 if not found
+        """
+        for i in range(len(self.model.scenarios)):
+            if self.model.scenarios[i].Label.strip().lower() == label.strip().lower():
+                return i
+        return -1
+
+    def get_stage_index_by_label(self, scenario_index: int, label: str) -> int:
+        """Get the index of the stage by label in a given scenario
+
+        Args:
+            scenario_index (int): The scenario index to check
+            stage_label (int): The stage label to find
+
+        Returns:
+            int: The index of the stage or -1 if not found
+        """
+        if scenario_index < 0 or scenario_index > len(self.model.scenarios) - 1:
+            raise ValueError(f"Invalid scenario index '{scenario_index}' given")
+        for i in range(len(self.model.scenarios[scenario_index].Stages)):
+            if (
+                self.model.scenarios[scenario_index].Stages[i].Label.strip().lower()
+                == label.strip().lower()
+            ):
+                return i
+        return -1
+
     def get_closest_point_from_x(self, x: float) -> Tuple[float, float]:
         """Get the closest point to the given x coordinate
 
@@ -515,6 +557,16 @@ class DStability(BaseModel):
                 return layer
 
         raise ValueError(f"Layer not found, unknown layer label '{label}'")
+
+    def get_layer_by_id(self, id: str) -> Dict:
+        geom = self.model._get_geometry(
+            self.current_scenario_index, self.current_stage_index
+        )
+        for layer in geom.Layers:
+            if layer.Id == id:
+                return layer
+
+        raise ValueError(f"Layer not found, unknown layer id '{id}'")
 
     def get_headline_coordinates(self, label: str) -> List[Tuple[float, float]]:
         """Get the coordinates of the given headline
@@ -729,6 +781,9 @@ class DStability(BaseModel):
         ).SoilLayers:
             soillayers[sl.LayerId] = sl.SoilId
 
+        soilid_soillabel_dict = (
+            {}
+        )  # we need this connection later in the waternetcreator settings
         for layer in layers:
             self.points += [(float(p.X), float(p.Z)) for p in layer.Points]
             polygons.append(Polygon([(float(p.X), float(p.Z)) for p in layer.Points]))
@@ -740,6 +795,7 @@ class DStability(BaseModel):
                     "label": layer.Label,
                 }
             )
+            soilid_soillabel_dict[layer.Id] = layer.Label
 
         # now remove the ids of the soils
         self.soils = [d for d in self.soils.values()]
@@ -785,6 +841,83 @@ class DStability(BaseModel):
                     "is_phreatic": hl.Id == self.model.waternets[0].PhreaticLineId,
                 }
             )
+
+        # waternet settings
+        for wn in self.model.datastructure.waternetcreatorsettings:
+            if (
+                wn.Id
+                == self.model.scenarios[self.current_scenario_index]
+                .Stages[self.current_stage_index]
+                .WaternetCreatorSettingsId
+            ):
+                self.waternet_settings["river_level_mhw"] = string_to_float(
+                    wn.NormativeWaterLevel
+                )
+                self.waternet_settings["river_level_ghw"] = string_to_float(
+                    wn.MeanWaterLevel
+                )
+                self.waternet_settings["polder_level"] = string_to_float(
+                    wn.WaterLevelHinterland
+                )
+                self.waternet_settings["B_offset"] = string_to_float(
+                    wn.OffsetEmbankmentTopWaterSide
+                )
+                self.waternet_settings["C_offset"] = string_to_float(
+                    wn.OffsetEmbankmentTopLandSide
+                )
+                self.waternet_settings["D_offset"] = string_to_float(
+                    wn.OffsetShoulderBaseLandSide
+                )
+                self.waternet_settings["E_offset"] = string_to_float(
+                    wn.OffsetEmbankmentToeLandSide
+                )
+                self.waternet_settings["phreatic_level_embankment_top_waterside"] = (
+                    string_to_float(wn.InitialLevelEmbankmentTopWaterSide)
+                )
+                self.waternet_settings["phreatic_level_embankment_top_landside"] = (
+                    string_to_float(wn.InitialLevelEmbankmentTopLandSide)
+                )
+                self.waternet_settings["aquifer_id"] = wn.AquiferLayerId
+                self.waternet_settings["aquifer_inside_aquitard_id"] = (
+                    wn.AquiferInsideAquitardLayerId
+                )
+                self.waternet_settings["aquifer_label"] = soilid_soillabel_dict[
+                    wn.AquiferLayerId
+                ]
+                self.waternet_settings["aquifer_inside_aquitard_label"] = (
+                    wn.AquiferInsideAquitardLayerId
+                )
+                self.waternet_settings["intrusion_length"] = string_to_float(
+                    wn.IntrusionLength
+                )
+                self.waternet_settings["hydraulic_head_pl2_inward"] = string_to_float(
+                    wn.AquitardHeadLandSide
+                )
+                self.waternet_settings["hydraulic_head_pl2_outward"] = string_to_float(
+                    wn.AquitardHeadWaterSide
+                )
+                self.waternet_settings["inward_leakage_length_pl3"] = string_to_float(
+                    wn.PleistoceneLeakageLengthInwards
+                )
+                self.waternet_settings["outward_leakage_length_pl3"] = string_to_float(
+                    wn.PleistoceneLeakageLengthOutwards
+                )
+                self.waternet_settings["inward_leakage_length_pl4"] = string_to_float(
+                    wn.AquiferLayerInsideAquitardLeakageLengthInwards
+                )
+                self.waternet_settings["outward_leakage_length_pl4"] = string_to_float(
+                    wn.AquiferLayerInsideAquitardLeakageLengthOutwards
+                )
+                self.waternet_settings["adjust_for_uplift"] = wn.AdjustForUplift
+                self.waternet_settings["material_layout"] = (
+                    EmbankmentSoilScenarioToMaterialLayoutType[
+                        wn.EmbankmentSoilScenario
+                    ]
+                )
+
+                break
+
+    adjust_for_uplift: bool = False
 
     def get_soil_from_layer_id(self, layer_id: str):
         for sl in self.soillayers:
@@ -1107,10 +1240,7 @@ class DStability(BaseModel):
             )
         return soilpolygons
 
-    def add_stage(self, label: str = "New stage"):
-        scenario = self.model.scenarios[self.current_scenario_index]
-        prev_stage_index = self.current_stage_index
-
+    def add_stage(self, label: str = "New stage", set_new_stage_as_current=True):
         from_scenario_index = self.current_scenario_index
         to_scenario_index = from_scenario_index
         from_stage_index = self.current_stage_index
@@ -1184,6 +1314,7 @@ class DStability(BaseModel):
             from_stage_index,
             to_scenario_index,
             to_stage_index,
+            layer_dict=layer_dict,
         )
 
         # # copy waternet TODO > according to the manual loads and pressure are removed in a new stage
@@ -1193,6 +1324,12 @@ class DStability(BaseModel):
         #     to_scenario_index,
         #     to_stage_index,
         # )
+
+        if set_new_stage_as_current:
+            self.current_scenario_index = to_scenario_index
+            self.current_stage_index = to_stage_index
+
+        self._post_process()
 
     def add_stage_from_soilpolygons(
         self,
@@ -1269,6 +1406,7 @@ class DStability(BaseModel):
         from_stage_index: int,
         to_scenario_index: int = -1,
         to_stage_index: int = -1,
+        layer_dict: Dict = {},
     ):
         from_settings, to_settings = None, None
         for wn in self.model.datastructure.waternetcreatorsettings:
@@ -1288,10 +1426,17 @@ class DStability(BaseModel):
                 to_settings = wn
 
         to_settings.AdjustForUplift = from_settings.AdjustForUplift
-        to_settings.AquiferInsideAquitardLayerId = (
-            from_settings.AquiferInsideAquitardLayerId
-        )
-        to_settings.AquiferLayerId = from_settings.AquiferLayerId
+        if from_settings.AquiferInsideAquitardLayerId is not None:
+            to_settings.AquiferInsideAquitardLayerId = layer_dict[
+                from_settings.AquiferInsideAquitardLayerId
+            ]
+        else:
+            to_settings.AquiferInsideAquitardLayerId = None
+
+        if from_settings.AquiferLayerId is not None:
+            to_settings.AquiferLayerId = layer_dict[from_settings.AquiferLayerId]
+        else:
+            to_settings.AquiferLayerId = None
         to_settings.AquiferLayerInsideAquitardLeakageLengthInwards = (
             from_settings.AquiferLayerInsideAquitardLeakageLengthInwards
         )
