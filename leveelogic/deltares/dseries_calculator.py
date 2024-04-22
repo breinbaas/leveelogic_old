@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from uuid import uuid1
 import logging
-from geolib.models.dstability.internal import AnalysisType
+from ..geolib.models.dstability.internal import AnalysisType
 
 from .dstability import DStability
 from .dgeoflow import DGeoFlow
@@ -154,8 +154,9 @@ class DSeriesCalculator(BaseModel):
             for cm in self.calculation_models:
                 for result in cm.results:
                     if (
-                        result.scenario_label == scenario_label
-                        and result.calculation_label == calculation_label
+                        result.scenario_label.lower() == scenario_label.lower()
+                        and result.calculation_label.lower()
+                        == calculation_label.lower()
                     ):
                         results.append(result)
             return results
@@ -228,7 +229,6 @@ class DSeriesCalculator(BaseModel):
             )
             calculation_model.model.serialize(calculation_model.filename)
             if calculation_model.type == CalculationModelType.DSTABILITY:
-                i = 1
                 threads.append(
                     threading.Thread(
                         target=calculate,

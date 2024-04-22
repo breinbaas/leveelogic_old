@@ -123,3 +123,7 @@ class TestDStability:
         assert ds.waterlevel_at(70) == 0.0
         assert ds.waterlevel_at(49) == -0.4
         assert ds.waterlevel_at(41.5) == -1.2
+
+    def test_s_eff(self):
+        ds = DStability.from_stix("tests/testdata/stix/real_sample.stix")
+        seff = ds.s_eff(x=26, z=-6.5)

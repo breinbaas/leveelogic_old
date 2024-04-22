@@ -689,6 +689,16 @@ class DStability(BaseModel):
                 zmax = ztop
         return result
 
+    def s_eff(self, x: float, z: float) -> float:
+        sp1 = self.soilprofile1_at(
+            x, self.current_scenario_index, self.current_stage_index
+        )
+
+        # TODO get z phreatic level
+
+        s = sp1.stresses(self.soilcollection)
+        i = 1
+
     # TODO
     def stresses_at(self, x: float) -> List[Tuple[float, float, float, float]]:
         """Get the soil stresses at the given x coordinate
@@ -897,12 +907,20 @@ class DStability(BaseModel):
                 self.waternet_settings["aquifer_inside_aquitard_id"] = (
                     wn.AquiferInsideAquitardLayerId
                 )
-                self.waternet_settings["aquifer_label"] = soilid_soillabel_dict[
-                    wn.AquiferLayerId
-                ]
-                self.waternet_settings["aquifer_inside_aquitard_label"] = (
-                    wn.AquiferInsideAquitardLayerId
-                )
+                if wn.AquiferLayerId is not None:
+                    self.waternet_settings["aquifer_label"] = soilid_soillabel_dict[
+                        wn.AquiferLayerId
+                    ]
+                else:
+                    self.waternet_settings["aquifer_label"] = None
+
+                if wn.AquiferInsideAquitardLayerId is not None:
+                    self.waternet_settings["aquifer_inside_aquitard_label"] = (
+                        soilid_soillabel_dict[wn.AquiferInsideAquitardLayerId]
+                    )
+                else:
+                    self.waternet_settings["aquifer_inside_aquitard_label"] = None
+
                 self.waternet_settings["intrusion_length"] = string_to_float(
                     wn.IntrusionLength
                 )
@@ -1081,6 +1099,15 @@ class DStability(BaseModel):
                 SoilLayer(top=add_layer[0], bottom=0.0, soilcode=add_layer[1]["code"])
             )
         result.soillayers[-1].bottom = -999.0
+
+        for i in range(len(self.phreatic_line_points)):
+            p1 = self.phreatic_line_points[i - 1]
+            p2 = self.phreatic_line_points[i]
+            if p1[0] <= x and x <= p2[0]:
+                result.waterlevel = p1[1] + (x - p1[0]) / (p2[0] - p1[0]) * (
+                    p2[1] - p1[1]
+                )
+
         return result
 
     def z_at(

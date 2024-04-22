@@ -13,6 +13,8 @@ UNIT_WEIGHT_WATER = 9.81
 CPT_QC_MAX = 20.0
 CPT_FR_MAX = 10.0
 
+UNITWEIGHT_WATER = 9.81
+
 # URLs
 BRO_CPT_DOWNLOAD_URL = "https://publiek.broservices.nl/sr/cpt/v1/objects"
 BRO_CPT_CHARACTERISTICS_URL = (

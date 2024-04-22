@@ -8,6 +8,7 @@ from ..geometry.soillayer import SoilLayer
 from ..models.datamodel import DataModel
 from ..soil.soilcollection import SoilCollection
 from .soilpolygon import SoilPolygon
+from ..settings import UNITWEIGHT_WATER
 
 
 class SoilProfile1GapError(Exception):
@@ -35,6 +36,7 @@ class SoilProfile1(DataModel):
     lon: float = 0.0
     left: float = 0.0
     right: float = 0.0
+    waterlevel: float = None
     soillayers: List[SoilLayer] = (
         []
     )  # TODO this is only valid for rectangles, should be polygons.. I think
@@ -199,4 +201,39 @@ class SoilProfile1(DataModel):
                 (self.left, layer.bottom),
             ]
             result.append(SoilPolygon(points=pts, soilcode=layer.soilcode))
+        return result
+
+    def stresses(
+        self,
+        soilcollection: SoilCollection,
+        unit_weight_water: float = UNITWEIGHT_WATER,
+    ):
+        result = []
+        u, stot = 0.0, 0.0
+
+        if self.waterlevel is None:
+            waterlevel = self.bottom - 1.0
+        else:
+            waterlevel = self.waterlevel
+
+        if waterlevel > self.top:
+            result.append((waterlevel, 0.0, 0.0, 0.0))
+            stot = u = (waterlevel - self.top) * unit_weight_water
+
+        for i, layer in enumerate(self.soillayers):
+            soil = soilcollection.get(layer.soilcode)
+            if i == 0:  # also add the top
+                result.append((layer.top, 0.0, u, stot))
+            if layer.top <= waterlevel:
+                stot += layer.height * soil.y_sat
+            elif layer.bottom >= waterlevel:
+                stot += layer.height * soil.y_dry
+            else:
+                stot += (layer.top - waterlevel) * soil.y_dry
+                u = 0.0
+                result.append((self.waterlevel, stot - u, u, stot))
+                stot += (waterlevel - layer.bottom) * soil.y_sat
+
+            u = max((waterlevel - layer.bottom) * unit_weight_water, 0.0)
+            result.append((layer.bottom, stot - u, u, stot))
         return result
