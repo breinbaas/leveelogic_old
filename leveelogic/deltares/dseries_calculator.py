@@ -1,4 +1,4 @@
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Optional
 from pydantic import BaseModel
 from enum import IntEnum
 import threading
@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from uuid import uuid1
 import logging
+from geolib.models.dstability.internal import AnalysisType
 
 from .dstability import DStability
 from .dgeoflow import DGeoFlow
@@ -18,6 +19,10 @@ class CalculationResult(BaseModel):
 
 
 class DStabilityCalculationResult(CalculationResult):
+    analysis_type: AnalysisType
+    calculation_model_name: str = ""
+    scenario_label: str = ""
+    calculation_label: str = ""
     safety_factor: float = 0.0
 
 
@@ -35,7 +40,7 @@ class CalculationModel(BaseModel):
     model: Union[DStability, DGeoFlow]
     name: str
     filename: str = ""
-    result: Union[DStabilityCalculationResult, DGeoFlowCalculationResult] = None
+    results: List[Union[DStabilityCalculationResult, DGeoFlowCalculationResult]] = []
 
     @property
     def type(self):
@@ -44,6 +49,27 @@ class CalculationModel(BaseModel):
         elif type(self.model) == DGeoFlow:
             return CalculationModelType.DGEOFLOW
         return CalculationModelType.NONE
+
+    def get_safety_factor(
+        self, scenario_label: str, calculation_label: str
+    ) -> Optional[float]:
+        """Get the safery factor for the given scenario and calculation label (case insensitive)
+
+        Args:
+            scenario_label (str): The label of the scenario
+            calculation_label (str): The label of the calculation
+
+        Returns:
+            Optional[float]: the safetyfactor or None if not found
+        """
+        if type(self.model) == DStability:
+            for result in self.results:
+                if (
+                    result.scenario_label.lower() == scenario_label.lower()
+                    and result.calculation_label.lower() == calculation_label.lower()
+                ):
+                    return result.safety_factor
+        return None
 
 
 class CalculationModelType(IntEnum):
@@ -56,18 +82,42 @@ def calculate(exe: str, model: CalculationModel):
     try:
         subprocess.call([exe, model.filename])
     except Exception as e:
-        model.result.error = f"Got a calculation error; '{e}'"
+        model.results.error = f"Got a calculation error; '{e}'"
         return
 
     if model.type == CalculationModelType.DSTABILITY:
         try:
             ds = DStability.from_stix(model.filename)
-            model.result = DStabilityCalculationResult(
-                safety_factor=ds.model.output[0].FactorOfSafety
-            )
+
+            results = []
+            for scenario_index in range(len(ds.model.scenarios)):
+                for calculation_index in range(
+                    len(ds.model.scenarios[scenario_index].Calculations)
+                ):
+                    try:
+                        result = ds.model.get_result(scenario_index, calculation_index)
+                        calculation_settings = ds.model._get_calculation_settings(
+                            scenario_index, calculation_index
+                        )
+
+                        results.append(
+                            DStabilityCalculationResult(
+                                analysis_type=calculation_settings.AnalysisType.value,
+                                calculation_model_name=model.name,
+                                scenario_label=ds.model.scenarios[scenario_index].Label,
+                                calculation_label=ds.model.scenarios[scenario_index]
+                                .Calculations[calculation_index]
+                                .Label,
+                                safety_factor=result.FactorOfSafety,
+                            )
+                        )
+                    except ValueError as e:
+                        logging.error(f"Error creating calculation result; {e}")
+
+            model.results = results
             return
         except Exception as e:
-            model.result = DStabilityCalculationResult(
+            model.results = DStabilityCalculationResult(
                 error=f"Got calculation result error '{e}'"
             )
     elif model.type == CalculationModelType.DGEOFLOW:
@@ -98,13 +148,17 @@ class DSeriesCalculator(BaseModel):
                 return cm
         raise ValueError(f"No model with name '{model_name}'")
 
-    def get_model_result_dict(self):
+    def get_model_result(self, scenario_label: str, calculation_label: str):
+        results = []
         if self.calculation_model_type == CalculationModelType.DSTABILITY:
-            return {
-                cm.name: cm.result.safety_factor
-                for cm in self.calculation_models
-                if cm.result.safety_factor is not None
-            }
+            for cm in self.calculation_models:
+                for result in cm.results:
+                    if (
+                        result.scenario_label == scenario_label
+                        and result.calculation_label == calculation_label
+                    ):
+                        results.append(result)
+            return results
         elif self.calculation_model_type == CalculationModelType.DGEOFLOW:
             raise NotImplementedError()
         else:
@@ -174,6 +228,7 @@ class DSeriesCalculator(BaseModel):
             )
             calculation_model.model.serialize(calculation_model.filename)
             if calculation_model.type == CalculationModelType.DSTABILITY:
+                i = 1
                 threads.append(
                     threading.Thread(
                         target=calculate,

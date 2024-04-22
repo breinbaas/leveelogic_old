@@ -21,11 +21,11 @@ class VoxelModel(BaseModel):
         cpts: List[Cpt],
         soilcolors: Dict,
         cpt_conversion_method: CptConversionMethod.THREE_TYPE_RULE,
-        size_x: float = 10.0,
-        size_y: float = 10.0,
+        size_x: float = 5.0,
+        size_y: float = 5.0,
         size_z: float = 1.0,
         xy_margin: float = 0.0,
-        max_cpt_distance: float = 30.0,
+        max_cpt_distance: float = 100.0,
     ) -> "VoxelModel":
         vm = VoxelModel()
         # get the dimensions
@@ -125,12 +125,16 @@ class VoxelModel(BaseModel):
     ):
         fig = plt.Figure(figsize=(size_x, size_y))
         ax = fig.add_subplot(projection="3d")
+
         # = plt.figure().add_subplot()
         for id, color in self.soilcolors.items():
             v = self.M == id
             ax.voxels(v, facecolors=color + alpha, edgecolor="k")
 
+        ax.set_aspect("equalxy")
         if filename == "":
             return fig
         else:
             fig.savefig(filename)
+
+    # def export(self):

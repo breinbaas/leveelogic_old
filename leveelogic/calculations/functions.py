@@ -4,14 +4,11 @@ from ..geolib.models.dstability.internal import AnalysisTypeEnum
 
 def get_model_factor(analysis_type: AnalysisTypeEnum) -> float:
     """Based on sh-macrostabiliteit-v4-28-mei-2021.pdf table 2-4"""
-    if analysis_type in [AnalysisTypeEnum.BISHOP, AnalysisTypeEnum.BISHOP_BRUTE_FORCE]:
+    if analysis_type.value in ["Bishop", "BishopBruteForce"]:
         return 1.11
-    elif analysis_type in [AnalysisTypeEnum.SPENCER, AnalysisTypeEnum.SPENCER_GENETIC]:
+    elif analysis_type.value in ["Spencer", "SpencerGenetic"]:
         return 1.07
-    elif analysis_type in [
-        AnalysisTypeEnum.UPLIFT_VAN,
-        AnalysisTypeEnum.UPLIFT_VAN_PARTICLE_SWARM,
-    ]:
+    elif analysis_type.value in ["UpliftVan", "UpliftVanParticleSwarm"]:
         return 1.06
     else:
         raise ValueError(

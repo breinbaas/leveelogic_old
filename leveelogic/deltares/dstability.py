@@ -1767,3 +1767,7 @@ class DStability(BaseModel):
         )
         wnet_to_copy.HeadLines.clear()
         wnet_to_copy.ReferenceLines.clear()
+
+    # def get_result_from_result_id(self, id: str):
+    #     for scenario in self.model.scenarios:
+    #         for calculation in scenario.Calculations:
